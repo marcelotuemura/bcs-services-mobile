@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { appUrl } from '@/lib/env';
 
 const credentialsSchema = z.object({
-  email: z.string().email('Enter a valid email address.'),
+  email: z.string().email('Enter a valid email address.').toLowerCase(),
   password: z.string().min(6, 'Password must be at least 6 characters.')
 });
 
@@ -73,7 +73,7 @@ export async function signOut() {
 }
 
 export async function resetPassword(_: ActionState, formData: FormData): Promise<ActionState> {
-  const email = String(formData.get('email') || '').trim();
+  const email = String(formData.get('email') || '').trim(). toLowerCase();
   if (!z.string().email().safeParse(email).success) return { ok: false, message: 'Enter a valid email.' };
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
