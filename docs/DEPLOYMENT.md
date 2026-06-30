@@ -2,7 +2,10 @@
 
 ## 1. Supabase
 
-Run `supabase/migrations/0001_foundation.sql` in Supabase SQL Editor.
+Run the migrations in order in Supabase SQL Editor:
+
+1. `supabase/migrations/0001_foundation.sql`
+2. `supabase/migrations/0002_fix_company_member_rls.sql`
 
 Then verify the following tables exist:
 
@@ -15,6 +18,7 @@ Verify these functions exist:
 - bootstrap_company_for_current_user
 - current_company_id
 - has_company_role
+- is_company_member
 
 ## 2. Vercel Environment Variables
 

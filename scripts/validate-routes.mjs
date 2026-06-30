@@ -13,7 +13,8 @@ const required = [
   'app/(app)/dashboard/page.tsx',
   'app/auth/callback/route.ts',
   'middleware.ts',
-  'supabase/migrations/0001_foundation.sql'
+  'supabase/migrations/0001_foundation.sql',
+  'supabase/migrations/0002_fix_company_member_rls.sql'
 ];
 
 const missing = required.filter((file) => !existsSync(r(file)));

@@ -26,10 +26,11 @@ Operational modules are placeholders until the foundation is verified.
 ## Setup
 
 1. Upload this package to the new GitHub repo: `bcs-services-mobile`.
-2. In Supabase SQL Editor, run:
+2. In Supabase SQL Editor, run the migrations in order:
 
 ```sql
 supabase/migrations/0001_foundation.sql
+supabase/migrations/0002_fix_company_member_rls.sql
 ```
 
 3. In Vercel, set environment variables:

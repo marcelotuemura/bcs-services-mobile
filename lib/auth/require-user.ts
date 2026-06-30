@@ -13,11 +13,22 @@ export async function requireUser() {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect('/');
 
-  const { data: membership } = await supabase
+  const { data: membership, error: membershipError } = await supabase
     .from('company_members')
     .select('role, company_id, companies(name, slug)')
     .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle();
+
+  if (membershipError) {
+    console.error('[requireUser] company membership lookup failed:', {
+      code: membershipError.code,
+      message: membershipError.message,
+      userId: user.id
+    });
+    throw new Error('Unable to load company membership.');
+  }
 
   return { supabase, user, membership };
 }
