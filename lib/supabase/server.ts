@@ -1,7 +1,15 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
-export async function createClient() {
+type CreateClientOptions = {
+  onCookieSet?: (event: {
+    success: boolean;
+    count: number;
+    errorMessage?: string;
+  }) => void;
+};
+
+export async function createClient(options?: CreateClientOptions) {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -13,10 +21,25 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
+          let count = 0;
+
           try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-          } catch {
-            // Server Components cannot always set cookies. Middleware handles refresh.
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+              count += 1;
+            });
+
+            options?.onCookieSet?.({
+              success: true,
+              count
+            });
+          } catch (error) {
+            options?.onCookieSet?.({
+              success: false,
+              count,
+              errorMessage:
+                error instanceof Error ? error.message : 'Unknown cookie error'
+            });
           }
         }
       }
