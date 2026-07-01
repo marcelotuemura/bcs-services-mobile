@@ -6,12 +6,21 @@ Run the migrations in order in Supabase SQL Editor:
 
 1. `supabase/migrations/0001_foundation.sql`
 2. `supabase/migrations/0002_fix_company_member_rls.sql`
+3. `supabase/migrations/0003_phase1_core_business.sql`
 
 Then verify the following tables exist:
 
 - companies
 - company_members
 - activity_log
+- permissions
+- role_permissions
+- user_permissions
+- customers
+- assets
+- work_orders
+- company_settings
+- audit_log
 
 Verify these functions exist:
 
@@ -19,6 +28,11 @@ Verify these functions exist:
 - current_company_id
 - has_company_role
 - is_company_member
+- has_permission
+- current_user_role
+- can_view_work_order
+- can_edit_work_order
+- search_company_records
 
 ## 2. Vercel Environment Variables
 

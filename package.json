@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
+    "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test:routes": "node scripts/validate-routes.mjs",
-    "test": "npm run typecheck && npm run test:routes"
+    "test": "tsc --noEmit && node scripts/validate-routes.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

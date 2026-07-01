@@ -10,11 +10,22 @@ const r = (file) => resolve(root, file);
 
 const required = [
   'app/(public)/page.tsx',
+  'app/(app)/assets/page.tsx',
+  'app/(app)/customers/page.tsx',
   'app/(app)/dashboard/page.tsx',
+  'app/(app)/search/page.tsx',
+  'app/(app)/settings/page.tsx',
+  'app/(app)/work-orders/page.tsx',
   'app/auth/callback/route.ts',
+  'actions/assets.ts',
+  'actions/customers.ts',
+  'actions/settings.ts',
+  'actions/work-orders.ts',
+  'lib/auth/permissions.ts',
   'middleware.ts',
   'supabase/migrations/0001_foundation.sql',
-  'supabase/migrations/0002_fix_company_member_rls.sql'
+  'supabase/migrations/0002_fix_company_member_rls.sql',
+  'supabase/migrations/0003_phase1_core_business.sql'
 ];
 
 const missing = required.filter((file) => !existsSync(r(file)));
@@ -33,6 +44,14 @@ const middleware = readFileSync(r('middleware.ts'), 'utf8');
 if (!middleware.includes('updateSession')) {
   console.error('middleware.ts must use Supabase session protection.');
   process.exit(1);
+}
+
+const phaseOneMigration = readFileSync(r('supabase/migrations/0003_phase1_core_business.sql'), 'utf8');
+for (const token of ['customers', 'assets', 'work_orders', 'has_permission', 'search_company_records']) {
+  if (!phaseOneMigration.includes(token)) {
+    console.error(`Phase 1 migration is missing ${token}.`);
+    process.exit(1);
+  }
 }
 
 console.log('Route validation passed.');

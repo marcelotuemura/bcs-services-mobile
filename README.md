@@ -1,19 +1,22 @@
-# BCS Services Mobile v1.0 Foundation
+# BCS Services Mobile v2.0 Phase 1
 
 A clean, mobile-first SaaS foundation for small mobile service companies.
 
-This release intentionally focuses on the foundation only:
+This release includes the authenticated company foundation plus Phase 1 operations:
 
 - Login-first public homepage
 - Supabase email/password authentication
 - Protected application routes
 - Company ownership model
 - Role-based membership model
+- Permission-based access control
+- Customers, assets, and work orders
+- Dashboard KPIs, recent activity, and today's schedule
+- Company settings and audit log
+- Global search foundation
 - Apple-inspired responsive shell
 - Versioned Supabase migration
 - Vercel-ready deployment setup
-
-Operational modules are placeholders until the foundation is verified.
 
 ## Stack
 
@@ -31,6 +34,7 @@ Operational modules are placeholders until the foundation is verified.
 ```sql
 supabase/migrations/0001_foundation.sql
 supabase/migrations/0002_fix_company_member_rls.sql
+supabase/migrations/0003_phase1_core_business.sql
 ```
 
 3. In Vercel, set environment variables:
