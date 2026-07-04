@@ -2,8 +2,6 @@
 
 import "@/styles/bcs-invoice.css";
 
-import "@/styles/bcs-invoice.css";
-
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
