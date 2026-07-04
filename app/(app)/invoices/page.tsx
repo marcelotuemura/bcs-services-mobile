@@ -1,139 +1,55 @@
-"use client";
+import Link from "next/link"
+import { requireCompanyContext } from "@/lib/auth/permissions"
+import { createClient } from "@/lib/supabase/server"
 
-import "@/styles/bcs-invoice.css";
+export default async function InvoicesPage() {
+  const { membership } = await requireCompanyContext()
+  const supabase = await createClient()
 
-
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
-
-interface Invoice {
-  id: string;
-  invoice_number: string;
-  customer_id: string;
-  vessel_id: string;
-  date: string;
-  due_date: string;
-  status: "pending" | "paid" | "overdue" | "draft";
-  tax_rate: number;
-  notes: string;
-  total: number;
-  customers: { name: string };
-  vessels: { name: string };
-}
-
-export default function InvoicesPage() {
-  const { user } = useAuth();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchInvoices();
-  }, [user]);
-
-  async function fetchInvoices() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("invoices")
-      .select(`
-        *,
-        customers(name),
-        vessels(name)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching invoices:", error);
-    } else {
-      setInvoices(data || []);
-    }
-    setLoading(false);
-  }
-
-  function formatMoney(amount: number) {
-    return amount.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
-
-  function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  if (loading) {
-    return (
-      <section>
-        <p className="kicker">BCS Services Mobile</p>
-        <h1 className="page-title">Invoices</h1>
-        <div className="loading">Loading invoices...</div>
-      </section>
-    );
-  }
+  const { data: invoices } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("company_id", membership.company_id)
+    .order("created_at", { ascending: false })
 
   return (
-    <section>
-      <p className="kicker">BCS Services Mobile</p>
-      <h1 className="page-title">Invoices</h1>
-
-      <div className="bcs-header-actions">
-        <Link href="/invoices/new" className="bcs-btn-primary">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Invoices</h1>
+        <Link
+          href="/invoices/new"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
           New Invoice
         </Link>
       </div>
-
-      {invoices.length === 0 ? (
-        <div className="bcs-empty-state">
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-            <rect x="8" y="12" width="48" height="40" rx="4" stroke="#c7c7cc" strokeWidth="2"/>
-            <path d="M16 24h32M16 32h24M16 40h16" stroke="#c7c7cc" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          <h3>No Invoices Yet</h3>
-          <p>Create your first invoice to get started</p>
-          <Link href="/invoices/new" className="bcs-btn-primary">
-            Create Invoice
-          </Link>
-        </div>
-      ) : (
-        <div className="bcs-invoice-list">
-          {invoices.map((inv) => (
+      {invoices && invoices.length > 0 ? (
+        <div className="space-y-3">
+          {invoices.map((invoice) => (
             <Link
-              key={inv.id}
-              href={`/invoices/${inv.id}`}
-              className="bcs-invoice-card"
+              key={invoice.id}
+              href={`/invoices/${invoice.id}`}
+              className="block p-4 border rounded-lg hover:bg-gray-50"
             >
-              <div className="bcs-invoice-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="bcs-invoice-info">
-                <div className="bcs-invoice-number">{inv.invoice_number}</div>
-                <div className="bcs-invoice-customer">
-                  {inv.customers?.name || "Unknown Customer"}
-                </div>
-                <div className="bcs-invoice-date">{formatDate(inv.date)}</div>
-              </div>
-              <div className="bcs-invoice-meta">
-                <div className="bcs-invoice-amount">${formatMoney(inv.total)}</div>
-                <span className={`bcs-status-badge bcs-status-${inv.status}`}>
-                  {inv.status}
+              <div className="flex justify-between">
+                <span className="font-medium">Invoice #{invoice.invoice_number || invoice.id.slice(0, 8)}</span>
+                <span className={`px-2 py-1 rounded text-sm ${
+                  invoice.status === "paid" ? "bg-green-100 text-green-800" :
+                  invoice.status === "overdue" ? "bg-red-100 text-red-800" :
+                  "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {invoice.status}
                 </span>
+              </div>
+              <div className="text-gray-600 mt-1">
+                ${invoice.total} · {invoice.customer_name || "No customer"}
               </div>
             </Link>
           ))}
         </div>
+      ) : (
+        <p className="text-gray-500 text-center py-12">No invoices yet.</p>
       )}
-    </section>
-  );
+    </div>
+  )
 }
