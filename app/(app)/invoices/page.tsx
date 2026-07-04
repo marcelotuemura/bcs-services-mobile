@@ -2,8 +2,8 @@
 
 import "@/styles/bcs-invoice.css";
 
+import "@/styles/bcs-invoice.css";
 
-"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
