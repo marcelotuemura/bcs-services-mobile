@@ -1,0 +1,214 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+
+interface EstimateFormProps {
+  companyId: string;
+}
+
+export default function EstimateForm({ companyId }: EstimateFormProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number; item_type: string }>>([
+    { description: '', quantity: 1, unit_price: 0, item_type: 'labor' }
+  ]);
+
+  const addItem = () => {
+    setItems([...items, { description: '', quantity: 1, unit_price: 0, item_type: 'labor' }]);
+  };
+
+  const updateItem = (index: number, field: string, value: string | number) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setItems(newItems);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const calculateTotals = () => {
+    const laborTotal = items.filter(i => i.item_type === 'labor').reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    const partsTotal = items.filter(i => i.item_type === 'part').reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    const suppliesTotal = items.filter(i => i.item_type === 'supply').reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    const subtotal = laborTotal + partsTotal + suppliesTotal;
+    const tax = subtotal * 0.08;
+    return { laborTotal, partsTotal, suppliesTotal, subtotal, tax, total: subtotal + tax };
+  };
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
+    const { laborTotal, partsTotal, suppliesTotal, subtotal, tax, total } = calculateTotals();
+
+    const estimateData = {
+      company_id: companyId,
+      customer_id: formData.get('customer_id') as string,
+      work_order_id: formData.get('work_order_id') as string || null,
+      estimate_number: formData.get('estimate_number') as string,
+      status: 'draft',
+      issue_date: new Date().toISOString().split('T')[0],
+      expiry_date: formData.get('expiry_date') as string,
+      labor_total: laborTotal,
+      parts_total: partsTotal,
+      supplies_total: suppliesTotal,
+      discount: parseFloat(formData.get('discount') as string) || 0,
+      tax,
+      total,
+      customer_name: formData.get('customer_name') as string,
+      notes: formData.get('notes') as string
+    };
+
+    const { data: estimate, error: insertError } = await supabase
+      .from('estimates')
+      .insert(estimateData)
+      .select('id')
+      .single();
+
+    if (insertError) {
+      setError(insertError.message);
+      setLoading(false);
+      return;
+    }
+
+    const lineItems = items.map((item, index) => ({
+      estimate_id: estimate.id,
+      line_number: index + 1,
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.quantity * item.unit_price,
+      item_type: item.item_type
+    }));
+
+    const { error: itemsError } = await supabase.from('estimate_items').insert(lineItems);
+
+    if (itemsError) {
+      setError(itemsError.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push(`/estimates/${estimate.id}`);
+    router.refresh();
+  }
+
+  const { laborTotal, partsTotal, suppliesTotal, subtotal, tax, total } = calculateTotals();
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {error && <div className="notice error">{error}</div>}
+
+      <div className="form-section">
+        <label className="label" htmlFor="customer_id">Customer ID</label>
+        <input className="input" id="customer_id" name="customer_id" required />
+        
+        <label className="label" htmlFor="customer_name">Customer Name</label>
+        <input className="input" id="customer_name" name="customer_name" required />
+
+        <label className="label" htmlFor="estimate_number">Estimate Number</label>
+        <input className="input" id="estimate_number" name="estimate_number" required />
+
+        <label className="label" htmlFor="expiry_date">Expiry Date</label>
+        <input className="input" id="expiry_date" name="expiry_date" type="date" required />
+
+        <label className="label" htmlFor="work_order_id">Work Order ID (optional)</label>
+        <input className="input" id="work_order_id" name="work_order_id" />
+
+        <label className="label" htmlFor="discount">Discount ($)</label>
+        <input className="input" id="discount" name="discount" type="number" step="0.01" defaultValue="0" />
+      </div>
+
+      <div className="form-section">
+        <h3>Line Items</h3>
+        {items.map((item, index) => (
+          <div key={index} className="flex gap-2 mb-2">
+            <select
+              className="input compact"
+              value={item.item_type}
+              onChange={(e) => updateItem(index, 'item_type', e.target.value)}
+            >
+              <option value="labor">Labor</option>
+              <option value="part">Part</option>
+              <option value="supply">Supply</option>
+            </select>
+            <input
+              className="input"
+              placeholder="Description"
+              value={item.description}
+              onChange={(e) => updateItem(index, 'description', e.target.value)}
+            />
+            <input
+              className="input compact"
+              type="number"
+              placeholder="Qty"
+              value={item.quantity}
+              onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+            />
+            <input
+              className="input compact"
+              type="number"
+              step="0.01"
+              placeholder="Price"
+              value={item.unit_price}
+              onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+            />
+            <button type="button" className="button secondary" onClick={() => removeItem(index)}>Remove</button>
+          </div>
+        ))}
+        <button type="button" className="button secondary" onClick={addItem}>Add Item</button>
+      </div>
+
+      <div className="border rounded-lg p-4 space-y-2">
+        <div className="flex justify-between">
+          <span>Labor</span>
+          <span>${laborTotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Parts</span>
+          <span>${partsTotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Supplies</span>
+          <span>${suppliesTotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Subtotal</span>
+          <span>${subtotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Tax (8%)</span>
+          <span>${tax.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-lg border-t pt-2">
+          <span>Total</span>
+          <span>${total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <label className="label" htmlFor="notes">Notes</label>
+        <textarea className="input" id="notes" name="notes" rows={3} />
+      </div>
+
+      <button className="button" type="submit" disabled={loading}>
+        {loading ? 'Creating...' : 'Create Estimate'}
+      </button>
+    </form>
+  );
+}
