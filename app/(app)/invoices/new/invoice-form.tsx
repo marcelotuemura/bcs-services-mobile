@@ -268,29 +268,43 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
       <div className="form-section">
         <h3>Line Items</h3>
         {items.map((item, index) => (
-          <div key={index} className="flex gap-2 mb-2">
-            <input
-              className="input"
-              placeholder="Description"
-              value={item.description}
-              onChange={(e) => updateItem(index, 'description', e.target.value)}
-            />
-            <input
-              className="input compact"
-              type="number"
-              placeholder="Qty"
-              value={item.quantity}
-              onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-            />
-            <input
-              className="input compact"
-              type="number"
-              step="0.01"
-              placeholder="Price"
-              value={item.unit_price}
-              onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-            />
-            <button type="button" className="button secondary" onClick={() => removeItem(index)}>Remove</button>
+          <div key={index} className="line-item-row">
+            <div className="line-item-fields invoice-fields">
+              <div>
+                <label className="label">Description</label>
+                <input
+                  className="input"
+                  placeholder="Job item or labor description..."
+                  value={item.description}
+                  onChange={(e) => updateItem(index, 'description', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Qty</label>
+                <input
+                  className="input"
+                  type="number"
+                  placeholder="Qty"
+                  value={item.quantity}
+                  onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Price</label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  placeholder="Price"
+                  value={item.unit_price}
+                  onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                  required
+                />
+              </div>
+            </div>
+            <button type="button" className="button secondary remove-button" onClick={() => removeItem(index)}>Remove</button>
           </div>
         ))}
         <button type="button" className="button secondary" onClick={addItem}>Add Item</button>

@@ -47,6 +47,46 @@ select option { color: #111827; }
 .nav a { color: var(--muted); padding: .85rem 1rem; border-radius: 16px; font-weight: 700; }
 .nav a:hover { background: rgba(255,255,255,.08); color: var(--text); }
 .nav a.active { background: rgba(255,255,255,.14); color: var(--text); }
+.line-item-row {
+  display: grid;
+  gap: 0.75rem;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+.line-item-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+.remove-button {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+}
+@media (min-width: 600px) {
+  .line-item-fields {
+    grid-template-columns: 130px 1fr 80px 110px;
+  }
+  .invoice-fields {
+    grid-template-columns: 1fr 80px 110px;
+  }
+}
+@media (min-width: 768px) {
+  .line-item-row {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 1rem;
+  }
+  .remove-button {
+    width: auto;
+    margin-top: 0;
+    margin-bottom: 0.15rem;
+  }
+}
 .main { padding: 1.35rem; }
 .stack { display: grid; gap: 1rem; }
 .topbar { display:flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .2rem; }
