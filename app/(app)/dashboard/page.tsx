@@ -50,17 +50,26 @@ export default async function DashboardPage() {
     supabase.from('invoices').select('amount_paid').eq('company_id', membership.company_id)
   ]) : [null, null, null, null, null, null, null, null, null, null];
 
-  // Safe error logging to prevent page crash on query failures
-  if (customersResult?.error) console.error('Dashboard: customers query failed:', customersResult.error);
-  if (assetsResult?.error) console.error('Dashboard: assets query failed:', assetsResult.error);
-  if (openWorkOrdersResult?.error) console.error('Dashboard: openWorkOrders query failed:', openWorkOrdersResult.error);
-  if (statusResult?.error) console.error('Dashboard: status query failed:', statusResult.error);
-  if (activityResult?.error) console.error('Dashboard: audit_log query failed:', activityResult.error);
-  if (scheduleResult?.error) console.error('Dashboard: schedule query failed:', scheduleResult.error);
-  if (settingsResult?.error) console.error('Dashboard: settings query failed:', settingsResult.error);
-  if (pendingEstimatesResult?.error) console.error('Dashboard: estimates query failed:', pendingEstimatesResult.error);
-  if (pendingInvoicesResult?.error) console.error('Dashboard: invoices query failed:', pendingInvoicesResult.error);
-  if (invoicesResult?.error) console.error('Dashboard: invoices revenue query failed:', invoicesResult.error);
+  const logQueryError = (queryName: string, error: any) => {
+    if (!error) return;
+    console.error(`Dashboard: ${queryName} query failed:`, {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
+  };
+
+  logQueryError('customers', customersResult?.error);
+  logQueryError('assets', assetsResult?.error);
+  logQueryError('openWorkOrders', openWorkOrdersResult?.error);
+  logQueryError('status', statusResult?.error);
+  logQueryError('audit_log', activityResult?.error);
+  logQueryError('schedule', scheduleResult?.error);
+  logQueryError('settings', settingsResult?.error);
+  logQueryError('estimates', pendingEstimatesResult?.error);
+  logQueryError('invoices', pendingInvoicesResult?.error);
+  logQueryError('invoices revenue', invoicesResult?.error);
 
   const statusRows = ((statusResult?.data || []) as { status: string }[]);
   const statusCounts = statusRows.reduce<Record<string, number>>((acc, row) => {
