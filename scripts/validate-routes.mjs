@@ -22,7 +22,7 @@ const required = [
   'actions/settings.ts',
   'actions/work-orders.ts',
   'lib/auth/permissions.ts',
-  'middleware.ts',
+  'proxy.ts',
   'supabase/migrations/0001_foundation.sql',
   'supabase/migrations/0002_fix_company_member_rls.sql',
   'supabase/migrations/0003_phase1_core_business.sql'
@@ -40,9 +40,9 @@ if (!loginPage.includes('AuthForm')) {
   process.exit(1);
 }
 
-const middleware = readFileSync(r('middleware.ts'), 'utf8');
-if (!middleware.includes('updateSession')) {
-  console.error('middleware.ts must use Supabase session protection.');
+const proxy = readFileSync(r('proxy.ts'), 'utf8');
+if (!proxy.includes('updateSession')) {
+  console.error('proxy.ts must use Supabase session protection.');
   process.exit(1);
 }
 

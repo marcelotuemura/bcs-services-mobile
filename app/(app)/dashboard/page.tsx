@@ -1,7 +1,8 @@
 import { requireUser } from '@/lib/auth/require-user';
 import { formatCurrency, formatDateTime, enumLabel } from '@/lib/format';
+import Link from 'next/link';
 
-type ActivityRow = {
+type AuditLogRow = {
   id: string;
   action: string;
   entity_type: string | null;
@@ -41,20 +42,32 @@ export default async function DashboardPage() {
     supabase.from('assets').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).is('archived_at', null),
     supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).not('status', 'in', '("completed","delivered","cancelled")'),
     supabase.from('work_orders').select('status').eq('company_id', membership.company_id).limit(500),
-    supabase.from('activity_log').select('id, action, entity_type, created_at').eq('company_id', membership.company_id).order('created_at', { ascending: false }).limit(6),
+    supabase.from('audit_log').select('id, action, entity_type, created_at').eq('company_id', membership.company_id).order('created_at', { ascending: false }).limit(6),
     supabase.from('work_orders').select('id, title, status, priority, scheduled_for').eq('company_id', membership.company_id).gte('scheduled_for', start.toISOString()).lte('scheduled_for', end.toISOString()).order('scheduled_for', { ascending: true }).limit(6),
     supabase.from('company_settings').select('currency').eq('company_id', membership.company_id).maybeSingle(),
-    supabase.from('estimates').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).eq('status', 'pending'),
-    supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).not('status', 'in', '("paid","cancelled","void")'),
+    supabase.from('estimates').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).in('status', ['draft', 'sent']),
+    supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).not('status', 'in', '("paid","cancelled")'),
     supabase.from('invoices').select('amount_paid').eq('company_id', membership.company_id)
   ]) : [null, null, null, null, null, null, null, null, null, null];
+
+  // Safe error logging to prevent page crash on query failures
+  if (customersResult?.error) console.error('Dashboard: customers query failed:', customersResult.error);
+  if (assetsResult?.error) console.error('Dashboard: assets query failed:', assetsResult.error);
+  if (openWorkOrdersResult?.error) console.error('Dashboard: openWorkOrders query failed:', openWorkOrdersResult.error);
+  if (statusResult?.error) console.error('Dashboard: status query failed:', statusResult.error);
+  if (activityResult?.error) console.error('Dashboard: audit_log query failed:', activityResult.error);
+  if (scheduleResult?.error) console.error('Dashboard: schedule query failed:', scheduleResult.error);
+  if (settingsResult?.error) console.error('Dashboard: settings query failed:', settingsResult.error);
+  if (pendingEstimatesResult?.error) console.error('Dashboard: estimates query failed:', pendingEstimatesResult.error);
+  if (pendingInvoicesResult?.error) console.error('Dashboard: invoices query failed:', pendingInvoicesResult.error);
+  if (invoicesResult?.error) console.error('Dashboard: invoices revenue query failed:', invoicesResult.error);
 
   const statusRows = ((statusResult?.data || []) as { status: string }[]);
   const statusCounts = statusRows.reduce<Record<string, number>>((acc, row) => {
     acc[row.status] = (acc[row.status] || 0) + 1;
     return acc;
   }, {});
-  const recentActivity = (activityResult?.data || []) as ActivityRow[];
+  const recentActivity = (activityResult?.data || []) as AuditLogRow[];
   const todaysSchedule = (scheduleResult?.data || []) as WorkOrderRow[];
   const currency = settingsResult?.data?.currency || 'USD';
   const pendingEstimates = pendingEstimatesResult?.count ?? 0;
@@ -70,9 +83,10 @@ export default async function DashboardPage() {
           <p style={{ color: 'var(--muted)' }}>Signed in as {user.email}</p>
         </div>
         <div className="quick-actions">
-          <a className="button secondary" href="/customers">Customer</a>
-          <a className="button secondary" href="/assets">Asset</a>
-          <a className="button secondary" href="/work-orders">Work order</a>
+          <Link className="button secondary" href="/customers">New customer</Link>
+          <Link className="button secondary" href="/work-orders">New work order</Link>
+          <Link className="button secondary" href="/estimates/new">New estimate</Link>
+          <Link className="button secondary" href="/invoices/new">New invoice</Link>
         </div>
       </div>
 
@@ -83,12 +97,30 @@ export default async function DashboardPage() {
       )}
 
       <div className="card-grid">
-        <div className="card glass"><h3>Customers</h3><strong>{customersResult?.count ?? 0}</strong></div>
-        <div className="card glass"><h3>Assets</h3><strong>{assetsResult?.count ?? 0}</strong></div>
-        <div className="card glass"><h3>Open work orders</h3><strong>{openWorkOrdersResult?.count ?? 0}</strong></div>
-        <div className="card glass"><h3>Pending estimates</h3><strong>{pendingEstimates}</strong></div>
-        <div className="card glass"><h3>Pending invoices</h3><strong>{pendingInvoices}</strong></div>
-        <div className="card glass"><h3>Revenue</h3><strong>{formatCurrency(totalRevenue, currency)}</strong></div>
+        <Link href="/customers" className="card glass block-link">
+          <h3>Customers</h3>
+          <strong>{customersResult?.count ?? 0}</strong>
+        </Link>
+        <Link href="/assets" className="card glass block-link">
+          <h3>Assets</h3>
+          <strong>{assetsResult?.count ?? 0}</strong>
+        </Link>
+        <Link href="/work-orders" className="card glass block-link">
+          <h3>Open work orders</h3>
+          <strong>{openWorkOrdersResult?.count ?? 0}</strong>
+        </Link>
+        <Link href="/estimates" className="card glass block-link">
+          <h3>Pending estimates</h3>
+          <strong>{pendingEstimates}</strong>
+        </Link>
+        <Link href="/invoices" className="card glass block-link">
+          <h3>Pending invoices</h3>
+          <strong>{pendingInvoices}</strong>
+        </Link>
+        <div className="card glass">
+          <h3>Revenue</h3>
+          <strong>{formatCurrency(totalRevenue, currency)}</strong>
+        </div>
       </div>
 
       <div className="two-column">
@@ -96,10 +128,10 @@ export default async function DashboardPage() {
           <h2>Today&apos;s schedule</h2>
           <div className="mini-list">
             {todaysSchedule.map((workOrder) => (
-              <a href="/work-orders" key={workOrder.id}>
+              <Link href="/work-orders" key={workOrder.id}>
                 <strong>{workOrder.title}</strong>
                 <span>{formatDateTime(workOrder.scheduled_for)} · {enumLabel(workOrder.status)} · {enumLabel(workOrder.priority)}</span>
-              </a>
+              </Link>
             ))}
             {!todaysSchedule.length && <p>No work orders scheduled today.</p>}
           </div>

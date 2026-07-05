@@ -15,7 +15,7 @@ export const customerSchema = z.object({
   tax_id: z.string().max(50).optional().nullable(),
   notes: z.string().optional().nullable(),
   tags: z.array(z.string()).optional().nullable(),
-  status: z.enum(['active', 'inactive', 'archived']).default('active'),
+  status: z.enum(['active', 'inactive', 'archived', 'lead']).default('active'),
 });
 
 export type CustomerInput = z.infer<typeof customerSchema>;
@@ -24,7 +24,7 @@ export type CustomerInput = z.infer<typeof customerSchema>;
 export const assetSchema = z.object({
   customer_id: z.string().uuid('Invalid customer ID'),
   asset_type: z.enum(['boat', 'engine', 'trailer', 'jet_ski', 'car', 'rv', 'equipment']),
-  make: z.string().max(100).optional().nullable(),
+  manufacturer: z.string().max(100).optional().nullable(),
   model: z.string().max(100).optional().nullable(),
   year: z.number().int().min(1900).max(new Date().getFullYear() + 1).optional().nullable(),
   engine: z.string().max(100).optional().nullable(),
@@ -47,7 +47,7 @@ export const workOrderSchema = z.object({
   asset_id: z.string().uuid('Invalid asset ID').optional().nullable(),
   technician_id: z.string().uuid('Invalid technician ID').optional().nullable(),
   status: z.enum(['draft', 'scheduled', 'checked_in', 'in_progress', 'waiting_parts', 'waiting_approval', 'completed', 'delivered', 'cancelled']).default('draft'),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().nullable(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).optional().nullable(),
   labor_cost: z.number().min(0).optional().nullable(),
   parts_cost: z.number().min(0).optional().nullable(),
   notes: z.string().optional().nullable(),
