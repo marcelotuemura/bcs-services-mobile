@@ -24,6 +24,7 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [taxRate, setTaxRate] = useState<number>(7);
 
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number; item_type: string }>>([
     { description: '', quantity: 1, unit_price: 0, item_type: 'labor' }
@@ -62,7 +63,7 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
     const partsTotal = items.filter(i => i.item_type === 'part').reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
     const suppliesTotal = items.filter(i => i.item_type === 'supply').reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
     const subtotal = laborTotal + partsTotal + suppliesTotal;
-    const tax = subtotal * 0.08;
+    const tax = subtotal * (taxRate / 100);
     return { laborTotal, partsTotal, suppliesTotal, subtotal, tax, total: subtotal + tax };
   };
 
@@ -258,7 +259,14 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
         <input className="input" id="vessel_id" name="vessel_id" defaultValue={defaultValues.vessel_id} />
 
         <label className="label" htmlFor="tax_rate">Tax Rate (%)</label>
-        <input className="input" id="tax_rate" name="tax_rate" type="number" defaultValue={defaultValues.tax_rate} />
+        <input
+          className="input"
+          id="tax_rate"
+          name="tax_rate"
+          type="number"
+          value={taxRate}
+          onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+        />
 
         <label className="label" htmlFor="discount">Discount ($)</label>
         <input className="input" id="discount" name="discount" type="number" step="0.01" defaultValue="0" />
@@ -322,7 +330,7 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
           <span>${subtotal.toFixed(2)}</span>
         </div>
         <div className="flex justify-between">
-          <span>Tax (8%)</span>
+          <span>Tax ({taxRate}%)</span>
           <span>${tax.toFixed(2)}</span>
         </div>
         <div className="flex justify-between font-bold text-lg border-t pt-2">

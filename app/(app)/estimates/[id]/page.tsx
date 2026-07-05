@@ -54,7 +54,7 @@ export default async function EstimateDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {estimate.status === "pending" && (
+      {(estimate.status === "draft" || estimate.status === "sent") && (
         <EstimateActions estimateId={estimate.id} companyId={membership.company_id} />
       )}
     </div>

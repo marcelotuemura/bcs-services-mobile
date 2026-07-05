@@ -24,6 +24,7 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [taxRate, setTaxRate] = useState<number>(7);
 
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number }>>([
     { description: '', quantity: 1, unit_price: 0 }
@@ -59,7 +60,7 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
 
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-    const tax = subtotal * 0.08;
+    const tax = subtotal * (taxRate / 100);
     return { subtotal, tax, total: subtotal + tax };
   };
 
@@ -254,7 +255,14 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
         <input className="input" id="vessel_id" name="vessel_id" defaultValue={defaultValues.vessel_id} />
 
         <label className="label" htmlFor="tax_rate">Tax Rate (%)</label>
-        <input className="input" id="tax_rate" name="tax_rate" type="number" defaultValue={defaultValues.tax_rate} />
+        <input
+          className="input"
+          id="tax_rate"
+          name="tax_rate"
+          type="number"
+          value={taxRate}
+          onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+        />
       </div>
 
       <div className="form-section">
@@ -294,7 +302,7 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
           <span>${subtotal.toFixed(2)}</span>
         </div>
         <div className="flex justify-between">
-          <span>Tax (8%)</span>
+          <span>Tax ({taxRate}%)</span>
           <span>${tax.toFixed(2)}</span>
         </div>
         <div className="flex justify-between font-bold text-lg border-t pt-2">
