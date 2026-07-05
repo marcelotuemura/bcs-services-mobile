@@ -91,7 +91,8 @@ export async function updateWorkOrderStatus(formData: FormData) {
       status,
       completed_at: status === 'completed' ? new Date().toISOString() : null
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('company_id', context.membership.company_id);
 
   await context.supabase.rpc('record_activity', {
     activity_action: 'work_order_status_updated',

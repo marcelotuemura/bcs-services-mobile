@@ -55,7 +55,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
       </div>
 
       {invoice.status !== "paid" && (
-        <InvoiceActions invoiceId={invoice.id} />
+        <InvoiceActions invoiceId={invoice.id} companyId={membership.company_id} />
       )}
     </div>
   )

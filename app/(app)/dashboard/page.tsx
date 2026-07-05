@@ -33,14 +33,14 @@ export default async function DashboardPage() {
     activityResult,
     scheduleResult,
     settingsResult
-  ] = hasCompany ? await Promise.all([
-    supabase.from('customers').select('id', { count: 'exact', head: true }).neq('status', 'archived'),
-    supabase.from('assets').select('id', { count: 'exact', head: true }).is('archived_at', null),
-    supabase.from('work_orders').select('id', { count: 'exact', head: true }).not('status', 'in', '("completed","delivered","cancelled")'),
-    supabase.from('work_orders').select('status').limit(500),
-    supabase.from('activity_log').select('id, action, entity_type, created_at').order('created_at', { ascending: false }).limit(6),
-    supabase.from('work_orders').select('id, title, status, priority, scheduled_for').gte('scheduled_for', start.toISOString()).lte('scheduled_for', end.toISOString()).order('scheduled_for', { ascending: true }).limit(6),
-    supabase.from('company_settings').select('currency').maybeSingle()
+  ] = (membership && hasCompany) ? await Promise.all([
+    supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).neq('status', 'archived'),
+    supabase.from('assets').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).is('archived_at', null),
+    supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).not('status', 'in', '("completed","delivered","cancelled")'),
+    supabase.from('work_orders').select('status').eq('company_id', membership.company_id).limit(500),
+    supabase.from('activity_log').select('id, action, entity_type, created_at').eq('company_id', membership.company_id).order('created_at', { ascending: false }).limit(6),
+    supabase.from('work_orders').select('id, title, status, priority, scheduled_for').eq('company_id', membership.company_id).gte('scheduled_for', start.toISOString()).lte('scheduled_for', end.toISOString()).order('scheduled_for', { ascending: true }).limit(6),
+    supabase.from('company_settings').select('currency').eq('company_id', membership.company_id).maybeSingle()
   ]) : [null, null, null, null, null, null, null];
 
   const statusRows = ((statusResult?.data || []) as { status: string }[]);

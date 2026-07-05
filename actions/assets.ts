@@ -64,7 +64,8 @@ export async function archiveAsset(formData: FormData) {
   await context.supabase
     .from('assets')
     .update({ archived_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('company_id', context.membership.company_id);
   await context.supabase.rpc('record_activity', {
     activity_action: 'asset_archived',
     activity_entity_type: 'asset',

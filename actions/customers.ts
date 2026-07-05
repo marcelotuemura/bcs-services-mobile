@@ -129,7 +129,8 @@ export async function updateCustomer(_: EntityActionState, formData: FormData): 
     const { error } = await context.supabase
       .from('customers')
       .update(updatePayload)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('company_id', context.membership.company_id);
 
     if (error) return { ok: false, message: error.message };
 
@@ -154,7 +155,8 @@ export async function archiveCustomer(formData: FormData) {
   await context.supabase
     .from('customers')
     .update({ status: 'archived', archived_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('company_id', context.membership.company_id);
   await context.supabase.rpc('record_activity', {
     activity_action: 'customer_archived',
     activity_entity_type: 'customer',
@@ -171,7 +173,8 @@ export async function restoreCustomer(formData: FormData) {
   await context.supabase
     .from('customers')
     .update({ status: 'active', archived_at: null })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('company_id', context.membership.company_id);
   await context.supabase.rpc('record_activity', {
     activity_action: 'customer_restored',
     activity_entity_type: 'customer',

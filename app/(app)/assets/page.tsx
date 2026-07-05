@@ -47,6 +47,7 @@ export default async function AssetsPage({ searchParams }: PageProps) {
   let request = context.supabase
     .from('assets')
     .select('id, asset_type, manufacturer, model, year, registration, vin, hin, hours, color, archived_at, customers(name)')
+    .eq('company_id', context.membership.company_id)
     .is('archived_at', null)
     .order('updated_at', { ascending: false })
     .limit(50);
@@ -58,6 +59,7 @@ export default async function AssetsPage({ searchParams }: PageProps) {
     context.supabase
       .from('customers')
       .select('id, name')
+      .eq('company_id', context.membership.company_id)
       .neq('status', 'archived')
       .order('name', { ascending: true })
       .limit(200)

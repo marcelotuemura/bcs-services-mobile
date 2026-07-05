@@ -6,9 +6,10 @@ import { createClient } from '@/lib/supabase/client';
 
 interface InvoiceActionsProps {
   invoiceId: string;
+  companyId: string;
 }
 
-export default function InvoiceActions({ invoiceId }: InvoiceActionsProps) {
+export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,8 @@ export default function InvoiceActions({ invoiceId }: InvoiceActionsProps) {
     const { error: updateError } = await supabase
       .from('invoices')
       .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', invoiceId);
+      .eq('id', invoiceId)
+      .eq('company_id', companyId);
 
     if (updateError) {
       setError(updateError.message);
@@ -46,6 +48,7 @@ export default function InvoiceActions({ invoiceId }: InvoiceActionsProps) {
       .from('invoices')
       .select('total, amount_paid')
       .eq('id', invoiceId)
+      .eq('company_id', companyId)
       .single();
 
     if (!invoice) {
@@ -78,7 +81,8 @@ export default function InvoiceActions({ invoiceId }: InvoiceActionsProps) {
         status: newStatus,
         updated_at: new Date().toISOString()
       })
-      .eq('id', invoiceId);
+      .eq('id', invoiceId)
+      .eq('company_id', companyId);
 
     if (updateError) {
       setError(updateError.message);

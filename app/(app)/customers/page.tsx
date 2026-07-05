@@ -47,6 +47,7 @@ export default async function CustomersPage({ searchParams }: PageProps) {
   let request = context.supabase
     .from('customers')
     .select('id, name, company_name, email, phone, mobile, city, state, status, tags', { count: 'exact' })
+    .eq('company_id', context.membership.company_id)
     .order('updated_at', { ascending: false })
     .range(from, from + pageSize - 1);
 

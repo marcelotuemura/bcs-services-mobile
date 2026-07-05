@@ -24,7 +24,7 @@ export default async function SettingsPage() {
   const [{ data: company }, { data: settings }, { data: auditLog }] = await Promise.all([
     context.supabase.from('companies').select('name').eq('id', companyId).single(),
     context.supabase.from('company_settings').select('logo_url, tax_rate, currency, language, timezone').eq('company_id', companyId).maybeSingle(),
-    context.supabase.from('audit_log').select('id, action, entity_type, created_at').order('created_at', { ascending: false }).limit(10)
+    context.supabase.from('audit_log').select('id, action, entity_type, created_at').eq('company_id', companyId).order('created_at', { ascending: false }).limit(10)
   ]);
 
   const companyRow = company as CompanyRow | null;

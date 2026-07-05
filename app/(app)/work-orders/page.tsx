@@ -63,6 +63,7 @@ export default async function WorkOrdersPage({ searchParams }: PageProps) {
   let request = context.supabase
     .from('work_orders')
     .select('id, title, status, priority, scheduled_for, estimated_hours, customer_notes, customers(name), assets(asset_type, manufacturer, model)')
+    .eq('company_id', context.membership.company_id)
     .order('scheduled_for', { ascending: true, nullsFirst: false })
     .order('updated_at', { ascending: false })
     .limit(50);
@@ -75,8 +76,8 @@ export default async function WorkOrdersPage({ searchParams }: PageProps) {
 
   const [{ data, error }, { data: customerData }, { data: assetData }] = await Promise.all([
     request,
-    context.supabase.from('customers').select('id, name').neq('status', 'archived').order('name', { ascending: true }).limit(200),
-    context.supabase.from('assets').select('id, asset_type, manufacturer, model, customer_id').is('archived_at', null).order('updated_at', { ascending: false }).limit(200)
+    context.supabase.from('customers').select('id, name').eq('company_id', context.membership.company_id).neq('status', 'archived').order('name', { ascending: true }).limit(200),
+    context.supabase.from('assets').select('id, asset_type, manufacturer, model, customer_id').eq('company_id', context.membership.company_id).is('archived_at', null).order('updated_at', { ascending: false }).limit(200)
   ]);
 
   const workOrders = (data || []) as WorkOrderRow[];
