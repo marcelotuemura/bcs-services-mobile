@@ -53,14 +53,19 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
 
     const { subtotal, tax, total } = calculateTotals();
 
+    // Compute dates inside the event handler (not during render)
+    const today = new Date();
+    const due = new Date(today);
+    due.setDate(today.getDate() + 15);
+
     const invoiceData = {
       company_id: companyId,
       customer_id: formData.get('customer_id') as string,
       work_order_id: formData.get('work_order_id') as string || null,
       invoice_number: formData.get('invoice_number') as string,
       status: 'draft',
-      issue_date: new Date().toISOString().split('T')[0],
-      due_date: formData.get('due_date') as string,
+      issue_date: today.toISOString().split('T')[0],
+      due_date: formData.get('due_date') as string || due.toISOString().split('T')[0],
       subtotal,
       tax,
       total,
