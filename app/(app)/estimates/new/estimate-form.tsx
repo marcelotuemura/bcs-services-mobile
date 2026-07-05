@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -15,6 +15,20 @@ export default function EstimateForm({ companyId }: EstimateFormProps) {
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number; item_type: string }>>([
     { description: '', quantity: 1, unit_price: 0, item_type: 'labor' }
   ]);
+
+  // Stable default values computed once via useMemo
+  const defaultValues = useMemo(() => {
+    const today = new Date();
+    const valid = new Date(today);
+    valid.setDate(today.getDate() + 30);
+    return {
+      vessel_id: '',
+      date: today.toISOString().split('T')[0],
+      valid_date: valid.toISOString().split('T')[0],
+      tax_rate: 7,
+      notes: 'This estimate is valid for 30 days. Prices subject to change after expiration.',
+    };
+  }, []);
 
   const addItem = () => {
     setItems([...items, { description: '', quantity: 1, unit_price: 0, item_type: 'labor' }]);
@@ -62,8 +76,8 @@ export default function EstimateForm({ companyId }: EstimateFormProps) {
       work_order_id: formData.get('work_order_id') as string || null,
       estimate_number: formData.get('estimate_number') as string,
       status: 'draft',
-      issue_date: new Date().toISOString().split('T')[0],
-      expiry_date: formData.get('expiry_date') as string,
+      issue_date: formData.get('date') as string || defaultValues.date,
+      expiry_date: formData.get('valid_date') as string || defaultValues.valid_date,
       labor_total: laborTotal,
       parts_total: partsTotal,
       supplies_total: suppliesTotal,
@@ -71,7 +85,7 @@ export default function EstimateForm({ companyId }: EstimateFormProps) {
       tax,
       total,
       customer_name: formData.get('customer_name') as string,
-      notes: formData.get('notes') as string
+      notes: formData.get('notes') as string || defaultValues.notes
     };
 
     const { data: estimate, error: insertError } = await supabase
@@ -124,11 +138,20 @@ export default function EstimateForm({ companyId }: EstimateFormProps) {
         <label className="label" htmlFor="estimate_number">Estimate Number</label>
         <input className="input" id="estimate_number" name="estimate_number" required />
 
-        <label className="label" htmlFor="expiry_date">Expiry Date</label>
-        <input className="input" id="expiry_date" name="expiry_date" type="date" required />
+        <label className="label" htmlFor="date">Issue Date</label>
+        <input className="input" id="date" name="date" type="date" defaultValue={defaultValues.date} />
+
+        <label className="label" htmlFor="valid_date">Valid Until</label>
+        <input className="input" id="valid_date" name="valid_date" type="date" defaultValue={defaultValues.valid_date} required />
 
         <label className="label" htmlFor="work_order_id">Work Order ID (optional)</label>
         <input className="input" id="work_order_id" name="work_order_id" />
+
+        <label className="label" htmlFor="vessel_id">Vessel ID</label>
+        <input className="input" id="vessel_id" name="vessel_id" defaultValue={defaultValues.vessel_id} />
+
+        <label className="label" htmlFor="tax_rate">Tax Rate (%)</label>
+        <input className="input" id="tax_rate" name="tax_rate" type="number" defaultValue={defaultValues.tax_rate} />
 
         <label className="label" htmlFor="discount">Discount ($)</label>
         <input className="input" id="discount" name="discount" type="number" step="0.01" defaultValue="0" />
@@ -203,7 +226,7 @@ export default function EstimateForm({ companyId }: EstimateFormProps) {
 
       <div className="form-section">
         <label className="label" htmlFor="notes">Notes</label>
-        <textarea className="input" id="notes" name="notes" rows={3} />
+        <textarea className="input" id="notes" name="notes" rows={3} defaultValue={defaultValues.notes} />
       </div>
 
       <button className="button" type="submit" disabled={loading}>
