@@ -1,4 +1,4 @@
-import { createWorkOrder, updateWorkOrderStatus } from '@/actions/work-orders';
+import { createWorkOrder, updateWorkOrderStatus, convertToInvoice } from '@/actions/work-orders';
 import { getPermissions, requireCompanyContext } from '@/lib/auth/permissions';
 import { enumLabel, formatDateTime } from '@/lib/format';
 
@@ -169,17 +169,27 @@ export default async function WorkOrdersPage({ searchParams }: PageProps) {
               {workOrder.customer_notes && <p>{workOrder.customer_notes}</p>}
             </div>
             {canEditStatus && (
-              <form action={updateWorkOrderStatus} className="inline-form">
-                <input type="hidden" name="id" value={workOrder.id} />
-                <select className="input compact" name="status" defaultValue={workOrder.status}>
-                  {statuses.map((workOrderStatus) => (
-                    <option key={workOrderStatus} value={workOrderStatus} disabled={workOrderStatus === 'completed' && !permissions['workorders.complete']}>
-                      {enumLabel(workOrderStatus)}
-                    </option>
-                  ))}
-                </select>
-                <button className="button secondary" type="submit">Update</button>
-              </form>
+              <div className="row-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <form action={updateWorkOrderStatus} className="inline-form" style={{ display: 'flex', gap: '0.35rem' }}>
+                  <input type="hidden" name="id" value={workOrder.id} />
+                  <select className="input compact" name="status" defaultValue={workOrder.status} style={{ width: '130px' }}>
+                    {statuses.map((workOrderStatus) => (
+                      <option key={workOrderStatus} value={workOrderStatus} disabled={workOrderStatus === 'completed' && !permissions['workorders.complete']}>
+                        {enumLabel(workOrderStatus)}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="button secondary" type="submit">Update</button>
+                </form>
+                {permissions['invoices.create'] && workOrder.status !== 'completed' && (
+                  <form action={convertToInvoice}>
+                    <input type="hidden" name="id" value={workOrder.id} />
+                    <button className="button" type="submit" style={{ padding: '0.6rem 1rem', fontSize: '0.9rem' }}>
+                      Convert to Invoice
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
           </article>
         ))}
