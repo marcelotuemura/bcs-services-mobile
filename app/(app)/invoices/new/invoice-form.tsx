@@ -6,12 +6,25 @@ import { createClient } from '@/lib/supabase/client';
 
 interface InvoiceFormProps {
   companyId: string;
+  customers: Array<{ id: string; name: string }>;
 }
 
-export default function InvoiceForm({ companyId }: InvoiceFormProps) {
+export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Customer selection states
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(() => {
+    return customers.length > 0 ? customers[0].id : 'new';
+  });
+  const [isNewCustomer, setIsNewCustomer] = useState<boolean>(() => {
+    return customers.length === 0;
+  });
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number }>>([
     { description: '', quantity: 1, unit_price: 0 }
   ]);
@@ -65,11 +78,49 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
       return;
     }
 
+    let finalCustomerId = selectedCustomerId;
+    let finalCustomerName = '';
+
+    if (isNewCustomer) {
+      if (!newCustomerName.trim()) {
+        setError('New customer name is required.');
+        setLoading(false);
+        return;
+      }
+      const { data: newCustomer, error: customerError } = await supabase
+        .from('customers')
+        .insert({
+          company_id: companyId,
+          name: newCustomerName.trim(),
+          email: newCustomerEmail.trim() || null,
+          phone: newCustomerPhone.trim() || null,
+          status: 'active'
+        })
+        .select('id')
+        .single();
+
+      if (customerError) {
+        setError(customerError.message);
+        setLoading(false);
+        return;
+      }
+      finalCustomerId = newCustomer.id;
+      finalCustomerName = newCustomerName.trim();
+    } else {
+      const existing = customers.find(c => c.id === selectedCustomerId);
+      if (!existing) {
+        setError('Selected customer not found.');
+        setLoading(false);
+        return;
+      }
+      finalCustomerName = existing.name;
+    }
+
     const { subtotal, tax, total } = calculateTotals();
 
     const invoiceData = {
       company_id: companyId,
-      customer_id: formData.get('customer_id') as string,
+      customer_id: finalCustomerId,
       work_order_id: formData.get('work_order_id') as string || null,
       invoice_number: formData.get('invoice_number') as string,
       status: 'draft',
@@ -80,7 +131,7 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
       total,
       amount_paid: 0,
       balance_due: total,
-      customer_name: formData.get('customer_name') as string,
+      customer_name: finalCustomerName,
       notes: formData.get('notes') as string || defaultValues.notes
     };
 
@@ -125,11 +176,67 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
       {error && <div className="notice error">{error}</div>}
 
       <div className="form-section">
-        <label className="label" htmlFor="customer_id">Customer ID</label>
-        <input className="input" id="customer_id" name="customer_id" required />
-        
-        <label className="label" htmlFor="customer_name">Customer Name</label>
-        <input className="input" id="customer_name" name="customer_name" required />
+        <label className="label" htmlFor="customer_select">Customer</label>
+        <select
+          className="input"
+          id="customer_select"
+          value={isNewCustomer ? 'new' : selectedCustomerId}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === 'new') {
+              setIsNewCustomer(true);
+              setSelectedCustomerId('new');
+            } else {
+              setIsNewCustomer(false);
+              setSelectedCustomerId(val);
+            }
+          }}
+        >
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+          <option value="new">+ Create New Customer</option>
+        </select>
+
+        {isNewCustomer && (
+          <div className="border rounded-lg p-4 space-y-4 bg-gray-50/50" style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+            <h4 className="font-semibold text-sm">New Customer Details</h4>
+            <div>
+              <label className="label" htmlFor="new_customer_name">Name *</label>
+              <input
+                className="input"
+                id="new_customer_name"
+                value={newCustomerName}
+                onChange={(e) => setNewCustomerName(e.target.value)}
+                placeholder="Customer Name"
+                required={isNewCustomer}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="new_customer_email">Email</label>
+              <input
+                className="input"
+                id="new_customer_email"
+                type="email"
+                value={newCustomerEmail}
+                onChange={(e) => setNewCustomerEmail(e.target.value)}
+                placeholder="customer@email.com"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="new_customer_phone">Phone</label>
+              <input
+                className="input"
+                id="new_customer_phone"
+                value={newCustomerPhone}
+                onChange={(e) => setNewCustomerPhone(e.target.value)}
+                placeholder="Phone Number"
+              />
+            </div>
+          </div>
+        )}
 
         <label className="label" htmlFor="invoice_number">Invoice Number</label>
         <input className="input" id="invoice_number" name="invoice_number" required />
