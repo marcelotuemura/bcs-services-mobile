@@ -32,7 +32,10 @@ export default async function DashboardPage() {
     statusResult,
     activityResult,
     scheduleResult,
-    settingsResult
+    settingsResult,
+    pendingEstimatesResult,
+    pendingInvoicesResult,
+    invoicesResult
   ] = (membership && hasCompany) ? await Promise.all([
     supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).neq('status', 'archived'),
     supabase.from('assets').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).is('archived_at', null),
@@ -40,8 +43,11 @@ export default async function DashboardPage() {
     supabase.from('work_orders').select('status').eq('company_id', membership.company_id).limit(500),
     supabase.from('activity_log').select('id, action, entity_type, created_at').eq('company_id', membership.company_id).order('created_at', { ascending: false }).limit(6),
     supabase.from('work_orders').select('id, title, status, priority, scheduled_for').eq('company_id', membership.company_id).gte('scheduled_for', start.toISOString()).lte('scheduled_for', end.toISOString()).order('scheduled_for', { ascending: true }).limit(6),
-    supabase.from('company_settings').select('currency').eq('company_id', membership.company_id).maybeSingle()
-  ]) : [null, null, null, null, null, null, null];
+    supabase.from('company_settings').select('currency').eq('company_id', membership.company_id).maybeSingle(),
+    supabase.from('estimates').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).eq('status', 'pending'),
+    supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).not('status', 'in', '("paid","cancelled","void")'),
+    supabase.from('invoices').select('amount_paid').eq('company_id', membership.company_id)
+  ]) : [null, null, null, null, null, null, null, null, null, null];
 
   const statusRows = ((statusResult?.data || []) as { status: string }[]);
   const statusCounts = statusRows.reduce<Record<string, number>>((acc, row) => {
@@ -51,6 +57,9 @@ export default async function DashboardPage() {
   const recentActivity = (activityResult?.data || []) as ActivityRow[];
   const todaysSchedule = (scheduleResult?.data || []) as WorkOrderRow[];
   const currency = settingsResult?.data?.currency || 'USD';
+  const pendingEstimates = pendingEstimatesResult?.count ?? 0;
+  const pendingInvoices = pendingInvoicesResult?.count ?? 0;
+  const totalRevenue = (invoicesResult?.data || []).reduce((acc, row) => acc + (row.amount_paid || 0), 0);
 
   return (
     <section className="stack">
@@ -77,9 +86,9 @@ export default async function DashboardPage() {
         <div className="card glass"><h3>Customers</h3><strong>{customersResult?.count ?? 0}</strong></div>
         <div className="card glass"><h3>Assets</h3><strong>{assetsResult?.count ?? 0}</strong></div>
         <div className="card glass"><h3>Open work orders</h3><strong>{openWorkOrdersResult?.count ?? 0}</strong></div>
-        <div className="card glass"><h3>Pending estimates</h3><strong>0</strong></div>
-        <div className="card glass"><h3>Pending invoices</h3><strong>0</strong></div>
-        <div className="card glass"><h3>Revenue</h3><strong>{formatCurrency(0, currency)}</strong></div>
+        <div className="card glass"><h3>Pending estimates</h3><strong>{pendingEstimates}</strong></div>
+        <div className="card glass"><h3>Pending invoices</h3><strong>{pendingInvoices}</strong></div>
+        <div className="card glass"><h3>Revenue</h3><strong>{formatCurrency(totalRevenue, currency)}</strong></div>
       </div>
 
       <div className="two-column">
