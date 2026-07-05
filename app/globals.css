@@ -46,6 +46,7 @@ select option { color: #111827; }
 .nav { display: grid; gap: .35rem; }
 .nav a { color: var(--muted); padding: .85rem 1rem; border-radius: 16px; font-weight: 700; }
 .nav a:hover { background: rgba(255,255,255,.08); color: var(--text); }
+.nav a.active { background: rgba(255,255,255,.14); color: var(--text); }
 .main { padding: 1.35rem; }
 .stack { display: grid; gap: 1rem; }
 .topbar { display:flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .2rem; }

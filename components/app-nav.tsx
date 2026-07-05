@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { signOut } from '@/actions/auth';
 
 const links = [
@@ -22,7 +25,27 @@ export function AppNav({
   role?: string;
   permissions: Record<string, boolean>;
 }) {
-  const visibleLinks = links.filter((link) => link.permissions.some((permission) => permissions[permission]));
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
+    }
+    return pathname === href || pathname.startsWith(href + '/');
+  };
+
+  const hasLoadedPermissions = Object.keys(permissions).length > 0 && Object.values(permissions).some(val => val === true);
+
+  let visibleLinks;
+  if (role === 'owner') {
+    visibleLinks = links;
+  } else if (!hasLoadedPermissions) {
+    // Show standard fallback pages if the permissions lookup fails
+    const fallbackHrefs = ['/dashboard', '/customers', '/assets', '/work-orders', '/estimates', '/invoices'];
+    visibleLinks = links.filter((link) => fallbackHrefs.includes(link.href));
+  } else {
+    visibleLinks = links.filter((link) => link.permissions.some((permission) => permissions[permission]));
+  }
 
   return (
     <aside className="sidebar">
@@ -34,7 +57,15 @@ export function AppNav({
         </div>
       </div>
       <nav className="nav">
-        {visibleLinks.map(({ label, href }) => <Link key={href} href={href}>{label}</Link>)}
+        {visibleLinks.map(({ label, href }) => (
+          <Link
+            key={href}
+            href={href}
+            className={isActive(href) ? 'active' : undefined}
+          >
+            {label}
+          </Link>
+        ))}
       </nav>
       <form action={signOut} style={{ marginTop: '1rem' }}>
         <button className="button secondary" style={{ width: '100%' }}>Sign out</button>
