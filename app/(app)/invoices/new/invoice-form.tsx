@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -15,6 +15,20 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number }>>([
     { description: '', quantity: 1, unit_price: 0 }
   ]);
+
+  // Stable default values computed once via useMemo
+  const defaultValues = useMemo(() => {
+    const today = new Date();
+    const due = new Date(today);
+    due.setDate(today.getDate() + 15);
+    return {
+      vessel_id: '',
+      date: today.toISOString().split('T')[0],
+      due_date: due.toISOString().split('T')[0],
+      tax_rate: 7,
+      notes: 'Thank you for choosing Best Coatings Solution (BCS). We appreciate your business and trust in our team. All work is performed to the highest industry standards using premium materials.',
+    };
+  }, []);
 
   const addItem = () => {
     setItems([...items, { description: '', quantity: 1, unit_price: 0 }]);
@@ -53,26 +67,21 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
 
     const { subtotal, tax, total } = calculateTotals();
 
-    // Compute dates inside the event handler (not during render)
-    const today = new Date();
-    const due = new Date(today);
-    due.setDate(today.getDate() + 15);
-
     const invoiceData = {
       company_id: companyId,
       customer_id: formData.get('customer_id') as string,
       work_order_id: formData.get('work_order_id') as string || null,
       invoice_number: formData.get('invoice_number') as string,
       status: 'draft',
-      issue_date: today.toISOString().split('T')[0],
-      due_date: formData.get('due_date') as string || due.toISOString().split('T')[0],
+      issue_date: formData.get('date') as string || defaultValues.date,
+      due_date: formData.get('due_date') as string || defaultValues.due_date,
       subtotal,
       tax,
       total,
       amount_paid: 0,
       balance_due: total,
       customer_name: formData.get('customer_name') as string,
-      notes: formData.get('notes') as string
+      notes: formData.get('notes') as string || defaultValues.notes
     };
 
     const { data: invoice, error: insertError } = await supabase
@@ -125,11 +134,20 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
         <label className="label" htmlFor="invoice_number">Invoice Number</label>
         <input className="input" id="invoice_number" name="invoice_number" required />
 
+        <label className="label" htmlFor="date">Issue Date</label>
+        <input className="input" id="date" name="date" type="date" defaultValue={defaultValues.date} />
+
         <label className="label" htmlFor="due_date">Due Date</label>
-        <input className="input" id="due_date" name="due_date" type="date" required />
+        <input className="input" id="due_date" name="due_date" type="date" defaultValue={defaultValues.due_date} required />
 
         <label className="label" htmlFor="work_order_id">Work Order ID (optional)</label>
         <input className="input" id="work_order_id" name="work_order_id" />
+
+        <label className="label" htmlFor="vessel_id">Vessel ID</label>
+        <input className="input" id="vessel_id" name="vessel_id" defaultValue={defaultValues.vessel_id} />
+
+        <label className="label" htmlFor="tax_rate">Tax Rate (%)</label>
+        <input className="input" id="tax_rate" name="tax_rate" type="number" defaultValue={defaultValues.tax_rate} />
       </div>
 
       <div className="form-section">
@@ -180,7 +198,7 @@ export default function InvoiceForm({ companyId }: InvoiceFormProps) {
 
       <div className="form-section">
         <label className="label" htmlFor="notes">Notes</label>
-        <textarea className="input" id="notes" name="notes" rows={3} />
+        <textarea className="input" id="notes" name="notes" rows={3} defaultValue={defaultValues.notes} />
       </div>
 
       <button className="button" type="submit" disabled={loading}>
