@@ -50,10 +50,16 @@ returns table (
 ) language plpgsql security definer set search_path = public as $$
 begin
   -- Record public view when queried
-  update public.estimates
-  set public_view_count = public_view_count + 1,
+  update public.estimates est
+  set public_view_count = est.public_view_count + 1,
       last_public_viewed_at = now()
-  where approval_token = token;
+  where est.approval_token = token;
+
+  -- Record view in audit log
+  insert into public.audit_log(company_id, user_id, action, entity_type, entity_id, metadata)
+  select est.company_id, null, 'estimate_viewed_public', 'estimate', est.id, jsonb_build_object('view_count', est.public_view_count)
+  from public.estimates est
+  where est.approval_token = token;
 
   return query
   select
