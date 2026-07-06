@@ -82,14 +82,20 @@ export default async function EstimateDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {(estimate.status === "draft" || estimate.status === "sent" || estimate.status === "approved") && (
-        <EstimateActions 
-          estimateId={estimate.id} 
-          companyId={membership.company_id} 
-          status={estimate.status}
-          workOrderId={estimate.work_order_id}
-        />
-      )}
+      <EstimateActions 
+        estimateId={estimate.id} 
+        companyId={membership.company_id} 
+        status={estimate.status}
+        workOrderId={estimate.work_order_id}
+        approvalToken={estimate.approval_token}
+        approvalSentAt={estimate.approval_sent_at}
+        approvedAt={estimate.approved_at}
+        rejectedAt={estimate.rejected_at}
+        customerApprovedName={estimate.customer_approved_name}
+        customerApprovedEmail={estimate.customer_approved_email}
+        customerSignature={estimate.customer_signature}
+        customerResponseNotes={estimate.customer_response_notes}
+      />
     </div>
   )
 }
