@@ -29,8 +29,7 @@ const required = [
   'supabase/migrations/0004_estimates_invoices.sql',
   'supabase/migrations/0005_seed_permissions_robust.sql',
   'supabase/migrations/0006_rename_asset_make_to_manufacturer.sql',
-  'supabase/migrations/0007_repair_database_system.sql',
-  'supabase/migrations/0008_fix_missing_core_business_tables.sql'
+  'supabase/migrations/0008_final_foundation_repair.sql'
 ];
 
 const missing = required.filter((file) => !existsSync(r(file)));

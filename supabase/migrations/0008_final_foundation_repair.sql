@@ -1,7 +1,107 @@
--- BCS Services Mobile v2.0 Migration: Fix Missing Core Business Tables
--- Defines core and transactional tables, sets up RLS policies, seeds permissions, and bootstraps the company workspace.
+-- BCS Services Mobile v2.0 Migration: Final Foundation Repair
+-- Creates core helper functions at the very top, seeds roles/permissions, enables RLS, and bootstraps company workspace.
 
--- 1. Create Enums Safely
+-- ==========================================
+-- PHASE 1: Helper Functions & Public Grants
+-- ==========================================
+
+create or replace function public.current_company_id()
+returns uuid language sql stable security definer set search_path = public as $$
+  select company_id from public.company_members where user_id = auth.uid() order by created_at asc limit 1;
+$$;
+
+create or replace function public.is_company_member(target_company_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.company_members
+    where company_id = target_company_id
+      and user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.has_permission(requested_permission text)
+returns boolean language plpgsql stable security definer set search_path = public as $$
+declare
+  selected_company_id uuid;
+  selected_role text;
+  override_allowed boolean;
+begin
+  selected_company_id := public.current_company_id();
+  if selected_company_id is null or auth.uid() is null then
+    return false;
+  end if;
+
+  select role::text into selected_role
+  from public.company_members
+  where company_id = selected_company_id
+    and user_id = auth.uid()
+  order by created_at asc
+  limit 1;
+
+  if selected_role is null then
+    return false;
+  end if;
+
+  -- Bypasses checks for administrative owner/GM roles
+  if selected_role = 'owner' or selected_role = 'general_manager' then
+    return true;
+  end if;
+
+  select allowed into override_allowed
+  from public.user_permissions
+  where company_id = selected_company_id
+    and user_id = auth.uid()
+    and permission_key = requested_permission
+  limit 1;
+
+  if override_allowed is not null then
+    return override_allowed;
+  end if;
+
+  return exists (
+    select 1
+    from public.role_permissions
+    where role_key = selected_role
+      and permission_key = requested_permission
+  );
+end;
+$$;
+
+grant execute on function public.current_company_id() to public;
+grant execute on function public.is_company_member(uuid) to public;
+grant execute on function public.has_permission(text) to public;
+
+
+-- ==========================================
+-- PHASE 2: Recreate member_role Enum safely
+-- ==========================================
+
+alter table public.company_members alter column role drop default;
+alter table public.company_members alter column role type text;
+
+drop type if exists public.member_role cascade;
+
+create type public.member_role as enum (
+  'owner',
+  'general_manager',
+  'office',
+  'office_manager',
+  'service_advisor',
+  'technician',
+  'accounting',
+  'invoice_clerk',
+  'viewer'
+);
+
+alter table public.company_members alter column role type public.member_role using role::public.member_role;
+alter table public.company_members alter column role set default 'viewer'::public.member_role;
+
+
+-- ==========================================
+-- PHASE 3: Missing Business Tables
+-- ==========================================
+
+-- Create Enums Safely
 do $$
 begin
   create type public.customer_status as enum ('active', 'lead', 'inactive', 'archived');
@@ -26,7 +126,7 @@ begin
 exception when duplicate_object then null;
 end $$;
 
--- 2. Create tables in dependency order
+-- Create tables in dependency order
 create table if not exists public.roles (
   key text primary key,
   name text not null,
@@ -243,7 +343,11 @@ create table if not exists public.payments (
   created_at timestamptz not null default now()
 );
 
--- 3. Configure RLS Policies
+
+-- ==========================================
+-- PHASE 4: Security (RLS) Policies
+-- ==========================================
+
 alter table public.roles enable row level security;
 drop policy if exists roles_read_authenticated on public.roles;
 create policy roles_read_authenticated on public.roles for select to authenticated using (true);
@@ -345,7 +449,11 @@ create policy payments_read on public.payments for select to authenticated using
 drop policy if exists payments_insert on public.payments;
 create policy payments_insert on public.payments for insert to authenticated with check (exists (select 1 from public.invoices i where i.id = invoice_id and i.company_id = public.current_company_id()));
 
--- 4. Seed default roles, permissions, and mappings
+
+-- ==========================================
+-- PHASE 5: Seed Default Data
+-- ==========================================
+
 insert into public.roles(key, name, description) values
   ('owner', 'Owner', 'Full access to the company workspace.'),
   ('general_manager', 'General Manager', 'Company-wide operational access.'),
@@ -407,73 +515,47 @@ insert into public.role_permissions(role_key, permission_key)
 select 'general_manager', key from public.permissions
 on conflict do nothing;
 
--- 5. Re-define helper functions with security improvements and short-circuits
-create or replace function public.current_company_id()
-returns uuid language sql stable security definer set search_path = public as $$
-  select company_id from public.company_members where user_id = auth.uid() order by created_at asc limit 1;
-$$;
 
-create or replace function public.has_permission(requested_permission text)
-returns boolean language plpgsql stable security definer set search_path = public as $$
+-- ==========================================
+-- PHASE 6: Audit / Activity Log Functions
+-- ==========================================
+
+create or replace function public.record_activity(
+  activity_action text,
+  activity_entity_type text,
+  activity_entity_id uuid default null,
+  activity_metadata jsonb default '{}'::jsonb
+)
+returns void language plpgsql security definer set search_path = public as $$
 declare
   selected_company_id uuid;
-  selected_role text;
-  override_allowed boolean;
 begin
   selected_company_id := public.current_company_id();
-  if selected_company_id is null or auth.uid() is null then
-    return false;
+  if selected_company_id is null then
+    return;
   end if;
 
-  select role::text into selected_role
-  from public.company_members
-  where company_id = selected_company_id
-    and user_id = auth.uid()
-  order by created_at asc
-  limit 1;
-
-  if selected_role is null then
-    return false;
-  end if;
-
-  -- Bypasses checks for administrative owner/GM roles
-  if selected_role = 'owner' or selected_role = 'general_manager' then
-    return true;
-  end if;
-
-  select allowed into override_allowed
-  from public.user_permissions
-  where company_id = selected_company_id
-    and user_id = auth.uid()
-    and permission_key = requested_permission
-  limit 1;
-
-  if override_allowed is not null then
-    return override_allowed;
-  end if;
-
-  return exists (
-    select 1
-    from public.role_permissions
-    where role_key = selected_role
-      and permission_key = requested_permission
-  );
+  insert into public.audit_log(company_id, user_id, action, entity_type, entity_id, metadata)
+  values (selected_company_id, auth.uid(), activity_action, activity_entity_type, activity_entity_id, coalesce(activity_metadata, '{}'::jsonb));
 end;
 $$;
 
-grant execute on function public.current_company_id() to public;
-grant execute on function public.has_permission(text) to public;
+grant execute on function public.record_activity(text, text, uuid, jsonb) to authenticated;
 
--- 6. Bootstrap target user and company (ensures company_settings table exists beforehand)
+
+-- ==========================================
+-- PHASE 7: Bootstrap target user and company
+-- ==========================================
+
 do $$
 declare
   target_user_id uuid;
   target_company_id uuid;
 begin
-  -- 6a. Try to find by email
+  -- 7a. Try to find by email
   select id into target_user_id from auth.users where email = 'marcelotuemura@gmail.com' limit 1;
   
-  -- 6b. Fallback to the first registered user if not found by email
+  -- 7b. Fallback to the first registered user if not found by email
   if target_user_id is null then
     select id into target_user_id from auth.users order by created_at asc limit 1;
   end if;
