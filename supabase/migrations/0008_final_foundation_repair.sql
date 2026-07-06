@@ -126,6 +126,12 @@ begin
 exception when duplicate_object then null;
 end $$;
 
+-- Safely drop existing permissions tables to align columns
+drop table if exists public.user_permissions cascade;
+drop table if exists public.role_permissions cascade;
+drop table if exists public.permissions cascade;
+drop table if exists public.roles cascade;
+
 -- Create tables in dependency order
 create table if not exists public.roles (
   key text primary key,
