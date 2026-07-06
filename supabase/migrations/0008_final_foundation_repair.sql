@@ -98,7 +98,7 @@ alter table public.company_members alter column role set default 'viewer'::publi
 
 
 -- ==========================================
--- PHASE 3: Missing Business Tables
+-- PHASE 3: Drop and Recreate Business Tables
 -- ==========================================
 
 -- Create Enums Safely
@@ -126,14 +126,24 @@ begin
 exception when duplicate_object then null;
 end $$;
 
--- Safely drop existing permissions tables to align columns
+-- Drop all tables CASCADE to resolve schema discrepancies
+drop table if exists public.payments cascade;
+drop table if exists public.invoice_items cascade;
+drop table if exists public.invoices cascade;
+drop table if exists public.estimate_items cascade;
+drop table if exists public.estimates cascade;
+drop table if exists public.work_orders cascade;
+drop table if exists public.assets cascade;
+drop table if exists public.customers cascade;
+drop table if exists public.company_settings cascade;
+drop table if exists public.audit_log cascade;
 drop table if exists public.user_permissions cascade;
 drop table if exists public.role_permissions cascade;
 drop table if exists public.permissions cascade;
 drop table if exists public.roles cascade;
 
 -- Create tables in dependency order
-create table if not exists public.roles (
+create table public.roles (
   key text primary key,
   name text not null,
   description text,
@@ -141,21 +151,21 @@ create table if not exists public.roles (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.permissions (
+create table public.permissions (
   key text primary key,
   category text not null,
   description text not null,
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.role_permissions (
+create table public.role_permissions (
   role_key text not null references public.roles(key) on delete cascade,
   permission_key text not null references public.permissions(key) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (role_key, permission_key)
 );
 
-create table if not exists public.user_permissions (
+create table public.user_permissions (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -168,7 +178,7 @@ create table if not exists public.user_permissions (
   unique (company_id, user_id, permission_key)
 );
 
-create table if not exists public.company_settings (
+create table public.company_settings (
   company_id uuid primary key references public.companies(id) on delete cascade,
   logo_url text,
   tax_rate numeric(7,4) not null default 0,
@@ -181,7 +191,7 @@ create table if not exists public.company_settings (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.customers (
+create table public.customers (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
   created_by uuid references auth.users(id) on delete set null default auth.uid(),
@@ -205,7 +215,7 @@ create table if not exists public.customers (
   archived_at timestamptz
 );
 
-create table if not exists public.assets (
+create table public.assets (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
   customer_id uuid references public.customers(id) on delete set null,
@@ -230,7 +240,7 @@ create table if not exists public.assets (
   archived_at timestamptz
 );
 
-create table if not exists public.work_orders (
+create table public.work_orders (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
   customer_id uuid references public.customers(id) on delete set null,
@@ -257,7 +267,7 @@ create table if not exists public.work_orders (
   parts_cost numeric(12,2) not null default 0
 );
 
-create table if not exists public.audit_log (
+create table public.audit_log (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
   user_id uuid references auth.users(id) on delete set null,
@@ -270,27 +280,29 @@ create table if not exists public.audit_log (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.estimates (
+create table public.estimates (
   id uuid primary key default gen_random_uuid(),
-  company_id uuid not null references public.companies(id) on delete cascade,
+  company_id uuid not null references public.companies(id) on delete cascade default public.current_company_id(),
   customer_id uuid references public.customers(id) on delete set null,
   work_order_id uuid references public.work_orders(id) on delete set null,
   estimate_number text not null unique,
   status text not null default 'draft',
   issue_date date not null default current_date,
-  expiration_date date,
-  subtotal numeric(12,2) not null default 0,
-  discount_amount numeric(12,2) not null default 0,
-  tax_rate numeric(5,2) not null default 0,
+  expiry_date date not null,
+  labor_total numeric(12,2) not null default 0,
+  parts_total numeric(12,2) not null default 0,
+  supplies_total numeric(12,2) not null default 0,
+  discount numeric(12,2) not null default 0,
   tax numeric(12,2) not null default 0,
   total numeric(12,2) not null default 0,
-  customer_name text not null,
+  customer_name text,
   notes text,
+  vessel_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.estimate_items (
+create table public.estimate_items (
   id uuid primary key default gen_random_uuid(),
   estimate_id uuid not null references public.estimates(id) on delete cascade,
   line_number integer not null,
@@ -303,48 +315,47 @@ create table if not exists public.estimate_items (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.invoices (
+create table public.invoices (
   id uuid primary key default gen_random_uuid(),
-  company_id uuid not null references public.companies(id) on delete cascade,
+  company_id uuid not null references public.companies(id) on delete cascade default public.current_company_id(),
   customer_id uuid references public.customers(id) on delete set null,
+  estimate_id uuid references public.estimates(id) on delete set null,
   work_order_id uuid references public.work_orders(id) on delete set null,
   invoice_number text not null unique,
   status text not null default 'draft',
   issue_date date not null default current_date,
-  due_date date,
+  due_date date not null,
   subtotal numeric(12,2) not null default 0,
-  discount_amount numeric(12,2) not null default 0,
-  tax_rate numeric(5,2) not null default 0,
+  discount numeric(12,2) not null default 0,
   tax numeric(12,2) not null default 0,
   total numeric(12,2) not null default 0,
   amount_paid numeric(12,2) not null default 0,
   balance_due numeric(12,2) not null default 0,
-  customer_name text not null,
+  customer_name text,
   notes text,
+  vessel_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.invoice_items (
+create table public.invoice_items (
   id uuid primary key default gen_random_uuid(),
   invoice_id uuid not null references public.invoices(id) on delete cascade,
   line_number integer not null,
   description text not null,
-  quantity numeric(10,2) not null default 1,
-  unit_price numeric(12,2) not null default 0,
-  total_price numeric(12,2) not null default 0,
-  item_type text not null default 'part',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  quantity numeric(10,2) not null,
+  unit_price numeric(12,2) not null,
+  total_price numeric(12,2) not null,
+  item_type text not null,
+  created_at timestamptz not null default now()
 );
 
-create table if not exists public.payments (
+create table public.payments (
   id uuid primary key default gen_random_uuid(),
   invoice_id uuid not null references public.invoices(id) on delete cascade,
   amount numeric(12,2) not null,
   payment_method text not null,
-  payment_date timestamptz not null default now(),
-  transaction_reference text,
+  transaction_id text,
   notes text,
   created_at timestamptz not null default now()
 );
