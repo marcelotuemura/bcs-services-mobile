@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation"
-import { requireCompanyContext } from "@/lib/auth/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { requireCompanyContext, verifyPageAccess } from "@/lib/auth/permissions"
 import EstimateActions from "./estimate-actions"
 
 interface Props {
@@ -9,8 +8,9 @@ interface Props {
 
 export default async function EstimateDetailPage({ params }: Props) {
   const { id } = await params
-  const { membership } = await requireCompanyContext()
-  const supabase = await createClient()
+  const context = await requireCompanyContext()
+  await verifyPageAccess('estimates.create', context)
+  const { supabase, membership } = context
 
   const [estimateResult, estimateItemsResult] = await Promise.all([
     supabase

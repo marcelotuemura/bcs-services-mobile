@@ -1,10 +1,10 @@
-import { requireCompanyContext } from "@/lib/auth/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { requireCompanyContext, verifyPageAccess } from "@/lib/auth/permissions"
 import EstimateForm from "./estimate-form"
 
 export default async function NewEstimatePage() {
-  const { membership } = await requireCompanyContext()
-  const supabase = await createClient()
+  const context = await requireCompanyContext()
+  await verifyPageAccess('estimates.create', context)
+  const { supabase, membership } = context
 
   const { data: customers } = await supabase
     .from("customers")

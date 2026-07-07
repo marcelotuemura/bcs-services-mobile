@@ -1,4 +1,5 @@
 import { createWorkOrder, updateWorkOrderStatus, convertToInvoice } from '@/actions/work-orders';
+import { redirect } from 'next/navigation';
 import { getPermissions, requireCompanyContext } from '@/lib/auth/permissions';
 import { enumLabel, formatDateTime } from '@/lib/format';
 
@@ -53,11 +54,17 @@ export default async function WorkOrdersPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const context = await requireCompanyContext();
   const permissions = await getPermissions([
+    'workorders.view_all',
+    'workorders.view_assigned',
     'workorders.create',
     'workorders.edit_all',
     'workorders.edit_assigned',
     'workorders.complete'
   ], context);
+
+  if (!permissions['workorders.view_all'] && !permissions['workorders.view_assigned']) {
+    redirect('/invoices');
+  }
   const status = value(params, 'status') || 'open';
 
   let request = context.supabase

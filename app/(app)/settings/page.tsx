@@ -1,5 +1,5 @@
 import { updateCompanySettings } from '@/actions/settings';
-import { getPermissions, requireCompanyContext } from '@/lib/auth/permissions';
+import { getPermissions, requireCompanyContext, verifyPageAccess } from '@/lib/auth/permissions';
 
 type CompanyRow = { name: string };
 type SettingsRow = {
@@ -19,6 +19,7 @@ async function updateCompanySettingsForm(formData: FormData) {
 
 export default async function SettingsPage() {
   const context = await requireCompanyContext();
+  await verifyPageAccess('settings.view', context);
   const permissions = await getPermissions(['settings.view', 'settings.manage', 'audit.view'], context);
   const companyId = context.membership.company_id;
   const [{ data: company }, { data: settings }, { data: auditLog }] = await Promise.all([

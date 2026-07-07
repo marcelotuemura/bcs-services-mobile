@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation"
-import { requireCompanyContext } from "@/lib/auth/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { notFound, redirect } from "next/navigation"
+import { getPermissions, requireCompanyContext } from "@/lib/auth/permissions"
 import InvoiceActions from "./invoice-actions"
 
 interface Props {
@@ -9,8 +8,13 @@ interface Props {
 
 export default async function InvoiceDetailPage({ params }: Props) {
   const { id } = await params
-  const { membership } = await requireCompanyContext()
-  const supabase = await createClient()
+  const context = await requireCompanyContext()
+  const { supabase, user, membership } = context
+
+  const permissions = await getPermissions([
+    'invoices.view_all',
+    'invoices.view_own'
+  ], context)
 
   const [invoiceResult, invoiceItemsResult] = await Promise.all([
     supabase
@@ -31,6 +35,19 @@ export default async function InvoiceDetailPage({ params }: Props) {
 
   if (!invoice) {
     notFound()
+  }
+
+  // Enforce access control boundaries for own-only invoice viewing
+  if (!permissions['invoices.view_all']) {
+    if (permissions['invoices.view_own']) {
+      // Must be the creator of the invoice
+      if (invoice.created_by !== user.id) {
+        redirect('/invoices')
+      }
+    } else {
+      // No permissions at all
+      redirect('/invoices')
+    }
   }
 
   return (

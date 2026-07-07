@@ -42,3 +42,10 @@ export function requireAllowed(allowed: boolean, message = 'You do not have perm
     throw new Error(message);
   }
 }
+
+export async function verifyPageAccess(permission: string, context?: AppContext) {
+  const isAllowed = await can(permission, context);
+  if (!isAllowed) {
+    redirect('/invoices');
+  }
+}

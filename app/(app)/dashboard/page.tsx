@@ -1,6 +1,7 @@
 import { requireUser } from '@/lib/auth/require-user';
 import { formatCurrency, formatDateTime, enumLabel } from '@/lib/format';
 import Link from 'next/link';
+import { verifyPageAccess } from '@/lib/auth/permissions';
 
 type AuditLogRow = {
   id: string;
@@ -18,7 +19,9 @@ type WorkOrderRow = {
 };
 
 export default async function DashboardPage() {
-  const { membership, user, supabase } = await requireUser();
+  const context = await requireUser();
+  await verifyPageAccess('dashboard.view', context);
+  const { membership, user, supabase } = context;
   const hasCompany = Boolean(membership?.company_id);
   const today = new Date();
   const start = new Date(today);

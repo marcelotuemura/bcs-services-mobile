@@ -1,10 +1,10 @@
 import Link from "next/link"
-import { requireCompanyContext } from "@/lib/auth/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { requireCompanyContext, verifyPageAccess } from "@/lib/auth/permissions"
 
 export default async function EstimatesPage() {
-  const { membership } = await requireCompanyContext()
-  const supabase = await createClient()
+  const context = await requireCompanyContext()
+  await verifyPageAccess('estimates.create', context)
+  const { supabase, membership } = context
 
   const { data: estimates } = await supabase
     .from("estimates")

@@ -1,10 +1,10 @@
-import { requireCompanyContext } from "@/lib/auth/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { requireCompanyContext, verifyPageAccess } from "@/lib/auth/permissions"
 import InvoiceForm from "./invoice-form"
 
 export default async function NewInvoicePage() {
-  const { membership } = await requireCompanyContext()
-  const supabase = await createClient()
+  const context = await requireCompanyContext()
+  await verifyPageAccess('invoices.create', context)
+  const { supabase, membership } = context
 
   const { data: customers } = await supabase
     .from("customers")

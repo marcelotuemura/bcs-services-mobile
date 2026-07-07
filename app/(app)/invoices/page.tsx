@@ -1,27 +1,48 @@
 import Link from "next/link"
-import { requireCompanyContext } from "@/lib/auth/permissions"
-import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+import { getPermissions, requireCompanyContext } from "@/lib/auth/permissions"
 
 export default async function InvoicesPage() {
-  const { membership } = await requireCompanyContext()
-  const supabase = await createClient()
+  const context = await requireCompanyContext()
+  const { supabase, user, membership } = context
 
-  const { data: invoices } = await supabase
+  const permissions = await getPermissions([
+    'invoices.view_all',
+    'invoices.view_own',
+    'invoices.create'
+  ], context)
+
+  if (!permissions['invoices.view_all'] && !permissions['invoices.view_own']) {
+    redirect('/')
+  }
+
+  let query = supabase
     .from("invoices")
     .select("*")
     .eq("company_id", membership.company_id)
-    .order("created_at", { ascending: false })
+
+  // Filter based on role permissions
+  if (!permissions['invoices.view_all'] && permissions['invoices.view_own']) {
+    query = query.eq('created_by', user.id)
+  } else if (!permissions['invoices.view_all'] && !permissions['invoices.view_own']) {
+    // If they have no read access at all, return empty
+    query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const { data: invoices } = await query.order("created_at", { ascending: false })
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Invoices</h1>
-        <Link
-          href="/invoices/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          New Invoice
-        </Link>
+        {permissions['invoices.create'] && (
+          <Link
+            href="/invoices/new"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            New Invoice
+          </Link>
+        )}
       </div>
       {invoices && invoices.length > 0 ? (
         <div className="space-y-3">

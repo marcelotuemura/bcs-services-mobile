@@ -1,4 +1,4 @@
-import { getPermissions, requireCompanyContext } from '@/lib/auth/permissions';
+import { getPermissions, requireCompanyContext, verifyPageAccess } from '@/lib/auth/permissions';
 import { formatDateTime, enumLabel } from '@/lib/format';
 
 type SearchRow = {
@@ -21,6 +21,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const query = value(params, 'q').trim();
   const context = await requireCompanyContext();
+  await verifyPageAccess('search.use', context);
   const permissions = await getPermissions(['search.use'], context);
   const { data, error } = permissions['search.use']
     ? await context.supabase.rpc('search_company_records', {

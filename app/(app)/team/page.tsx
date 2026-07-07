@@ -1,4 +1,9 @@
-export default function Page() {
+import { requireCompanyContext, verifyPageAccess } from "@/lib/auth/permissions"
+
+export default async function TeamPage() {
+  const context = await requireCompanyContext()
+  await verifyPageAccess('team.manage', context)
+
   return (
     <section>
       <p className="kicker">BCS Services Mobile</p>
@@ -7,5 +12,5 @@ export default function Page() {
         This module is reserved for Sprint 2+. It will only be enabled after the database, permissions, and tests are verified.
       </div>
     </section>
-  );
+  )
 }

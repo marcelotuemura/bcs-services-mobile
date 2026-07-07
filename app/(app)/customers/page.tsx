@@ -1,5 +1,5 @@
 import { archiveCustomer, createCustomer, restoreCustomer } from '@/actions/customers';
-import { getPermissions, requireCompanyContext } from '@/lib/auth/permissions';
+import { getPermissions, requireCompanyContext, verifyPageAccess } from '@/lib/auth/permissions';
 
 type CustomerRow = {
   id: string;
@@ -34,6 +34,7 @@ function value(params: Record<string, string | string[] | undefined> | undefined
 export default async function CustomersPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const context = await requireCompanyContext();
+  await verifyPageAccess('customers.view', context);
   const permissions = await getPermissions([
     'customers.create',
     'customers.archive',

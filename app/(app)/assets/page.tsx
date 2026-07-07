@@ -1,5 +1,5 @@
 import { archiveAsset, createAsset } from '@/actions/assets';
-import { getPermissions, requireCompanyContext } from '@/lib/auth/permissions';
+import { getPermissions, requireCompanyContext, verifyPageAccess } from '@/lib/auth/permissions';
 import { enumLabel } from '@/lib/format';
 
 type AssetRow = {
@@ -41,6 +41,7 @@ function customerName(asset: AssetRow) {
 export default async function AssetsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const context = await requireCompanyContext();
+  await verifyPageAccess('assets.view', context);
   const permissions = await getPermissions(['assets.create', 'assets.archive'], context);
   const type = value(params, 'type') || 'all';
 
