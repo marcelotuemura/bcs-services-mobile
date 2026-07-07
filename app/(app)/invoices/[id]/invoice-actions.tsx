@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { sendInvoiceToCustomer } from '@/actions/invoices';
 
 interface InvoiceActionsProps {
   invoiceId: string;
@@ -13,10 +14,16 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://bestcoatingssolution.com';
+  const invoiceUrl = `${baseUrl}/invoices/${invoiceId}`;
 
   async function updateStatus(newStatus: string) {
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
     const supabase = createClient();
 
     const { error: updateError } = await supabase
@@ -28,15 +35,39 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
     if (updateError) {
       setError(updateError.message);
     } else {
+      setSuccessMessage(`Invoice marked as ${newStatus} successfully.`);
       router.refresh();
     }
     setLoading(false);
+  }
+
+  async function handleSend() {
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    const res = await sendInvoiceToCustomer(invoiceId, companyId);
+
+    if (res.ok) {
+      setSuccessMessage(res.message);
+      router.refresh();
+    } else {
+      setError(res.message);
+    }
+    setLoading(false);
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(invoiceUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   async function recordPayment(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
     
     const formData = new FormData(e.currentTarget);
     const amount = parseFloat(formData.get('amount') as string);
@@ -87,6 +118,7 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
     if (updateError) {
       setError(updateError.message);
     } else {
+      setSuccessMessage(`Recorded payment of $${amount.toFixed(2)} successfully.`);
       router.refresh();
     }
     setLoading(false);
@@ -95,14 +127,15 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
   return (
     <div className="space-y-4">
       {error && <div className="notice error">{error}</div>}
+      {successMessage && <div className="notice success">{successMessage}</div>}
       
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button 
           className="button" 
-          onClick={() => updateStatus('sent')} 
+          onClick={handleSend} 
           disabled={loading}
         >
-          Mark as Sent
+          Send to Customer
         </button>
         <button 
           className="button success" 
@@ -118,6 +151,29 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
         >
           Cancel
         </button>
+      </div>
+
+      <div className="border rounded-lg p-4 space-y-3 bg-gray-50/10" style={{ borderColor: 'var(--line)' }}>
+        <h4 className="font-semibold text-sm">Invoice Link Sharing</h4>
+        <p className="text-xs text-gray-400" style={{ color: 'var(--muted)', margin: '0 0 0.5rem' }}>
+          If email delivery is pending or fails, copy and manually share the link below:
+        </p>
+        <div className="flex gap-2">
+          <input 
+            className="input compact" 
+            value={invoiceUrl} 
+            readOnly 
+            style={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}
+          />
+          <button 
+            type="button" 
+            className="button secondary compact" 
+            onClick={handleCopy}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+        </div>
       </div>
 
       <form onSubmit={recordPayment} className="border rounded-lg p-4 space-y-2">
