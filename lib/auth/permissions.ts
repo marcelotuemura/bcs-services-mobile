@@ -13,7 +13,13 @@ export async function requireCompanyContext(): Promise<CompanyContext> {
 }
 
 export async function can(permission: string, context?: AppContext): Promise<boolean> {
-  const { supabase } = context ?? await requireUser();
+  const ctx = context ?? await requireUser();
+  const role = ctx.membership?.role;
+  if (role === 'owner' || role === 'general_manager') {
+    return true;
+  }
+
+  const { supabase } = ctx;
   const { data, error } = await supabase.rpc('has_permission', {
     requested_permission: permission
   });
