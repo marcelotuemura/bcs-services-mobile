@@ -3,6 +3,7 @@ import { getPermissions, requireCompanyContext, verifyPageAccess } from '@/lib/a
 
 type CustomerRow = {
   id: string;
+  customer_number: string | null;
   name: string;
   company_name: string | null;
   email: string | null;
@@ -47,7 +48,7 @@ export default async function CustomersPage({ searchParams }: PageProps) {
 
   let request = context.supabase
     .from('customers')
-    .select('id, name, company_name, email, phone, mobile, city, state, status, tags', { count: 'exact' })
+    .select('id, customer_number, name, company_name, email, phone, mobile, city, state, status, tags', { count: 'exact' })
     .eq('company_id', context.membership.company_id)
     .order('updated_at', { ascending: false })
     .range(from, from + pageSize - 1);
@@ -139,7 +140,7 @@ export default async function CustomersPage({ searchParams }: PageProps) {
         {customers.map((customer) => (
           <article className="row-card glass" key={customer.id}>
             <div>
-              <strong>{customer.name}</strong>
+              <strong>{customer.customer_number ? `[${customer.customer_number}] ` : ''}{customer.name}</strong>
               <p>{customer.company_name || customer.email || customer.phone || 'No contact details yet'}</p>
               <div className="meta-line">
                 <span>{customer.status}</span>

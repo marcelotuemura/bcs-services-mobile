@@ -13,6 +13,7 @@ type AssetOption = {
 };
 type WorkOrderRow = {
   id: string;
+  work_order_number: string | null;
   title: string;
   status: string;
   priority: string;
@@ -69,7 +70,7 @@ export default async function WorkOrdersPage({ searchParams }: PageProps) {
 
   let request = context.supabase
     .from('work_orders')
-    .select('id, title, status, priority, scheduled_for, estimated_hours, customer_notes, customers(name), assets(asset_type, manufacturer, model)')
+    .select('id, work_order_number, title, status, priority, scheduled_for, estimated_hours, customer_notes, customers(name), assets(asset_type, manufacturer, model)')
     .eq('company_id', context.membership.company_id)
     .order('scheduled_for', { ascending: true, nullsFirst: false })
     .order('updated_at', { ascending: false })
@@ -165,7 +166,7 @@ export default async function WorkOrdersPage({ searchParams }: PageProps) {
         {workOrders.map((workOrder) => (
           <article className="row-card glass" key={workOrder.id}>
             <div>
-              <strong>{workOrder.title}</strong>
+              <strong>{workOrder.work_order_number ? `[${workOrder.work_order_number}] ` : ''}{workOrder.title}</strong>
               <p>{joinedCustomer(workOrder)} · {joinedAsset(workOrder)}</p>
               <div className="meta-line">
                 <span>{enumLabel(workOrder.status)}</span>

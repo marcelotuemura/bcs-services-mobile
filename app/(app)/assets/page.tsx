@@ -4,6 +4,7 @@ import { enumLabel } from '@/lib/format';
 
 type AssetRow = {
   id: string;
+  asset_number: string | null;
   asset_type: string;
   manufacturer: string | null;
   model: string | null;
@@ -47,7 +48,7 @@ export default async function AssetsPage({ searchParams }: PageProps) {
 
   let request = context.supabase
     .from('assets')
-    .select('id, asset_type, manufacturer, model, year, registration, vin, hin, hours, color, archived_at, customers(name)')
+    .select('id, asset_number, asset_type, manufacturer, model, year, registration, vin, hin, hours, color, archived_at, customers(name)')
     .eq('company_id', context.membership.company_id)
     .is('archived_at', null)
     .order('updated_at', { ascending: false })
@@ -136,7 +137,7 @@ export default async function AssetsPage({ searchParams }: PageProps) {
         {assets.map((asset) => (
           <article className="row-card glass" key={asset.id}>
             <div>
-              <strong>{[enumLabel(asset.asset_type), asset.manufacturer, asset.model].filter(Boolean).join(' ')}</strong>
+              <strong>{asset.asset_number ? `[${asset.asset_number}] ` : ''}{[enumLabel(asset.asset_type), asset.manufacturer, asset.model].filter(Boolean).join(' ')}</strong>
               <p>{customerName(asset)}</p>
               <div className="meta-line">
                 {asset.year && <span>{asset.year}</span>}

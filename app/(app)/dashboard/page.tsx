@@ -12,6 +12,7 @@ type AuditLogRow = {
 
 type WorkOrderRow = {
   id: string;
+  work_order_number: string | null;
   title: string;
   status: string;
   priority: string;
@@ -46,7 +47,7 @@ export default async function DashboardPage() {
     supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).not('status', 'in', '("completed","delivered","cancelled")'),
     supabase.from('work_orders').select('status').eq('company_id', membership.company_id).limit(500),
     supabase.from('audit_log').select('id, action, entity_type, created_at').eq('company_id', membership.company_id).order('created_at', { ascending: false }).limit(6),
-    supabase.from('work_orders').select('id, title, status, priority, scheduled_for').eq('company_id', membership.company_id).gte('scheduled_for', start.toISOString()).lte('scheduled_for', end.toISOString()).order('scheduled_for', { ascending: true }).limit(6),
+    supabase.from('work_orders').select('id, work_order_number, title, status, priority, scheduled_for').eq('company_id', membership.company_id).gte('scheduled_for', start.toISOString()).lte('scheduled_for', end.toISOString()).order('scheduled_for', { ascending: true }).limit(6),
     supabase.from('company_settings').select('currency').eq('company_id', membership.company_id).maybeSingle(),
     supabase.from('estimates').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).in('status', ['draft', 'sent']),
     supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', membership.company_id).not('status', 'in', '("paid","cancelled")'),
@@ -141,7 +142,7 @@ export default async function DashboardPage() {
           <div className="mini-list">
             {todaysSchedule.map((workOrder) => (
               <Link href="/work-orders" key={workOrder.id}>
-                <strong>{workOrder.title}</strong>
+                <strong>{workOrder.work_order_number ? `[${workOrder.work_order_number}] ` : ''}{workOrder.title}</strong>
                 <span>{formatDateTime(workOrder.scheduled_for)} · {enumLabel(workOrder.status)} · {enumLabel(workOrder.priority)}</span>
               </Link>
             ))}
