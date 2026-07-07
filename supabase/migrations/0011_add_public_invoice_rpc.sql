@@ -43,8 +43,7 @@ begin
     i.created_at
   from public.invoices i
   join public.companies c on c.id = i.company_id
-  where i.id = target_id
-    and i.status != 'draft';
+  where i.id = target_id;
 end;
 $$;
 
@@ -74,7 +73,6 @@ begin
   from public.invoice_items ii
   join public.invoices i on i.id = ii.invoice_id
   where ii.invoice_id = target_id
-    and i.status != 'draft'
   order by ii.line_number asc;
 end;
 $$;
