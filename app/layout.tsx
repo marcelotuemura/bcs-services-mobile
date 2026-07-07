@@ -4,7 +4,11 @@ import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: 'BCS Services Mobile',
-  description: 'mobile-first operations software for small service companies'
+  description: 'mobile-first operations software for small service companies',
+  icons: {
+    icon: '/logo.jpg',
+    apple: '/logo.jpg'
+  }
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

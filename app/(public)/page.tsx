@@ -5,6 +5,9 @@ export default function LoginPage() {
     <main className="shell-bg auth-layout">
       <section className="hero glass">
         <div>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <img src="/logo.jpg" alt="BCS Logo" style={{ width: '90px', height: '90px', borderRadius: '22px', objectFit: 'contain', background: '#000', border: '1px solid var(--line)' }} />
+          </div>
           <p className="kicker">BCS Services Mobile</p>
           <h1>Run your service company from the field.</h1>
           <p>

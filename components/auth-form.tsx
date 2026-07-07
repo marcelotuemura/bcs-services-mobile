@@ -12,8 +12,11 @@ export function AuthForm() {
 
   return (
     <form key={mode} action={formAction} className="login-card glass form-stack">
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+        <img src="/logo.jpg" alt="BCS Logo" style={{ width: '80px', height: '80px', borderRadius: '20px', objectFit: 'contain', background: '#000', border: '1px solid var(--line)' }} />
+      </div>
       <div>
-        <p className="kicker">Secure access</p>
+        <p className="kicker" style={{ textAlign: 'center', margin: 0 }}>Secure access</p>
         <h2 style={{ margin: '0.4rem 0 0.35rem', fontSize: '2rem' }}>
           {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create company' : 'Reset password'}
         </h2>

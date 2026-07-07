@@ -98,15 +98,17 @@ export default async function PublicEstimatePage({ params }: Props) {
               <tbody className="divide-y divide-[var(--line)]">
                 {items?.map((item: any) => (
                   <tr key={item.id}>
-                    <td className="py-4 text-sm">
-                      <span className="font-semibold block text-white">{item.description}</span>
-                      <span className="text-xs uppercase px-1.5 py-0.5 rounded" style={{ color: 'var(--muted)', background: 'rgba(255,255,255,0.04)', fontSize: '0.7rem' }}>
-                        {item.item_type}
-                      </span>
+                    <td className="py-4 text-sm" data-label="Description">
+                      <div>
+                        <span className="font-semibold block text-white">{item.description}</span>
+                        <span className="text-xs uppercase px-1.5 py-0.5 rounded" style={{ color: 'var(--muted)', background: 'rgba(255,255,255,0.04)', fontSize: '0.7rem' }}>
+                          {item.item_type}
+                        </span>
+                      </div>
                     </td>
-                    <td className="py-4 text-sm text-center">{Number(item.quantity)}</td>
-                    <td className="py-4 text-sm text-right">${Number(item.unit_price).toFixed(2)}</td>
-                    <td className="py-4 text-sm text-right font-bold">${Number(item.total_price).toFixed(2)}</td>
+                    <td className="py-4 text-sm text-center" data-label="Qty">{Number(item.quantity)}</td>
+                    <td className="py-4 text-sm text-right" data-label="Unit Price">${Number(item.unit_price).toFixed(2)}</td>
+                    <td className="py-4 text-sm text-right font-bold" data-label="Total">${Number(item.total_price).toFixed(2)}</td>
                   </tr>
                 ))}
                 {!items?.length && (
