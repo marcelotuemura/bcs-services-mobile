@@ -18,7 +18,7 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
   const [copied, setCopied] = useState(false);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://bestcoatingssolution.com';
-  const invoiceUrl = `${baseUrl}/invoices/${invoiceId}`;
+  const invoiceUrl = `${baseUrl}/view-invoice/${invoiceId}`;
 
   async function updateStatus(newStatus: string) {
     setLoading(true);

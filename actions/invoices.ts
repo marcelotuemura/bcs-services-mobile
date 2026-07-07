@@ -41,7 +41,7 @@ export async function sendInvoiceToCustomer(invoiceId: string, companyId: string
 
     // 3. Construct invoice URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bestcoatingssolution.com';
-    const invoiceUrl = `${baseUrl}/invoices/${invoiceId}`;
+    const invoiceUrl = `${baseUrl}/view-invoice/${invoiceId}`;
 
     // 4. Send email via Resend
     const emailStatus = await sendInvoiceEmail({
