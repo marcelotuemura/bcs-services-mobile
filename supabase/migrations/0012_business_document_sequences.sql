@@ -203,6 +203,33 @@ for each row
 execute function public.trg_assign_asset_number();
 
 
+-- 6.5 Recreate missing can_view_work_order function if not exists
+create or replace function public.can_view_work_order(target_work_order_id uuid)
+returns boolean language plpgsql stable security definer set search_path = public as $$
+declare
+  selected_order public.work_orders%rowtype;
+begin
+  select * into selected_order
+  from public.work_orders
+  where id = target_work_order_id
+    and company_id = public.current_company_id();
+
+  if not found then
+    return false;
+  end if;
+
+  if public.has_permission('workorders.view_all') then
+    return true;
+  end if;
+
+  return public.has_permission('workorders.view_assigned')
+    and selected_order.technician_id = auth.uid();
+end;
+$$;
+
+grant execute on function public.can_view_work_order(uuid) to authenticated;
+
+
 -- 7. Update search_company_records RPC function to include numbers
 create or replace function public.search_company_records(search_term text default '', result_limit integer default 20)
 returns table (
