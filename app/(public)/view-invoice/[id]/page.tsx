@@ -41,13 +41,15 @@ export default async function PublicInvoicePage({ params }: Props) {
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>Professional Marine & Specialty Coatings</p>
           </div>
           <div className="text-right">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-              invoice.status === "paid" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
-              invoice.status === "overdue" ? "bg-red-500/20 text-red-400 border border-red-500/30" :
-              "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-            }`}>
-              {invoice.status}
-            </span>
+            {invoice.status !== "draft" && (
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                invoice.status === "paid" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
+                invoice.status === "overdue" ? "bg-red-500/20 text-red-400 border border-red-500/30" :
+                "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+              }`}>
+                {invoice.status}
+              </span>
+            )}
           </div>
         </div>
 

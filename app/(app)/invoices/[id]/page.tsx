@@ -63,13 +63,15 @@ export default async function InvoiceDetailPage({ params }: Props) {
           <h1 className="text-2xl font-bold">Invoice #{invoice.invoice_number || invoice.id.slice(0, 8)}</h1>
           <p className="text-gray-600 mt-1" style={{ color: 'var(--muted)' }}>{invoice.customer_name || "No customer"}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-          invoice.status === "paid" ? "bg-green-100 text-green-800" :
-          invoice.status === "overdue" ? "bg-red-100 text-red-800" :
-          "bg-yellow-100 text-yellow-800"
-        }`}>
-          {invoice.status}
-        </span>
+        {invoice.status !== "draft" && (
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            invoice.status === "paid" ? "bg-green-100 text-green-800" :
+            invoice.status === "overdue" ? "bg-red-100 text-red-800" :
+            "bg-yellow-100 text-yellow-800"
+          }`}>
+            {invoice.status}
+          </span>
+        )}
       </div>
 
       <div className="card glass mb-6" style={{ padding: '1.25rem', borderRadius: '18px', marginBottom: '1.5rem' }}>
