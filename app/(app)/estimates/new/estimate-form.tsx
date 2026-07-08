@@ -24,7 +24,7 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
-  const [taxRate, setTaxRate] = useState<number>(7);
+  const [taxRate, setTaxRate] = useState<number>(0);
 
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number; item_type: string }>>([
     { description: '', quantity: 1, unit_price: 0, item_type: 'labor' }
@@ -39,7 +39,7 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
       vessel_id: '',
       date: today.toISOString().split('T')[0],
       valid_date: valid.toISOString().split('T')[0],
-      tax_rate: 7,
+      tax_rate: 0,
       notes: 'This estimate is valid for 30 days. Prices subject to change after expiration.',
     };
   }, []);
@@ -126,7 +126,7 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
       company_id: companyId,
       customer_id: finalCustomerId,
       work_order_id: formData.get('work_order_id') as string || null,
-      estimate_number: formData.get('estimate_number') as string,
+      estimate_number: (formData.get('estimate_number') as string || '').trim() || null,
       status: 'draft',
       issue_date: formData.get('date') as string || defaultValues.date,
       expiry_date: formData.get('valid_date') as string || defaultValues.valid_date,
@@ -243,8 +243,8 @@ export default function EstimateForm({ companyId, customers }: EstimateFormProps
           </div>
         )}
 
-        <label className="label" htmlFor="estimate_number">Estimate Number</label>
-        <input className="input" id="estimate_number" name="estimate_number" required />
+        <label className="label" htmlFor="estimate_number">Estimate Number (optional)</label>
+        <input className="input" id="estimate_number" name="estimate_number" placeholder="Leave blank to auto-generate" />
 
         <label className="label" htmlFor="date">Issue Date</label>
         <input className="input" id="date" name="date" type="date" defaultValue={defaultValues.date} />

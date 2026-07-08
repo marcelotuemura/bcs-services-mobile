@@ -128,8 +128,6 @@ export async function convertToInvoice(formData: FormData) {
   const tax = subtotal * 0.07; // Default 7% tax matching bcs standard
   const total = subtotal + tax;
 
-  const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
-
   // 2. Create the invoice
   const { data: invoice, error: invError } = await context.supabase
     .from('invoices')
@@ -137,7 +135,7 @@ export async function convertToInvoice(formData: FormData) {
       company_id: context.membership.company_id,
       customer_id: workOrder.customer_id,
       work_order_id: workOrder.id,
-      invoice_number: invoiceNumber,
+      invoice_number: null,
       status: 'draft',
       issue_date: new Date().toISOString().split('T')[0],
       due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 15 days due
@@ -149,7 +147,7 @@ export async function convertToInvoice(formData: FormData) {
       customer_name: customerName,
       notes: workOrder.customer_notes || 'Invoice generated from Work Order.'
     })
-    .select('id')
+    .select('id, invoice_number')
     .single();
 
   if (invError || !invoice) {
@@ -158,22 +156,23 @@ export async function convertToInvoice(formData: FormData) {
 
   // 3. Create line items from work order costs
   const lineItems = [];
-  if (workOrder.labor_cost && workOrder.labor_cost > 0) {
+  if (workOrder.labor_cost > 0) {
     lineItems.push({
       invoice_id: invoice.id,
       line_number: 1,
-      description: `Labor charges for: ${workOrder.title}`,
+      description: 'Labor Charges',
       quantity: 1,
       unit_price: workOrder.labor_cost,
       total_price: workOrder.labor_cost,
       item_type: 'labor'
     });
   }
-  if (workOrder.parts_cost && workOrder.parts_cost > 0) {
+
+  if (workOrder.parts_cost > 0) {
     lineItems.push({
       invoice_id: invoice.id,
-      line_number: lineItems.length + 1,
-      description: `Parts & Materials for: ${workOrder.title}`,
+      line_number: 2,
+      description: 'Parts & Materials',
       quantity: 1,
       unit_price: workOrder.parts_cost,
       total_price: workOrder.parts_cost,
@@ -200,7 +199,7 @@ export async function convertToInvoice(formData: FormData) {
     activity_action: 'invoice_created_from_work_order',
     activity_entity_type: 'invoice',
     activity_entity_id: invoice.id,
-    activity_metadata: { invoice_number: invoiceNumber }
+    activity_metadata: { invoice_number: invoice.invoice_number }
   });
 
   revalidatePath('/work-orders');

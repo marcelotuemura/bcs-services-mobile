@@ -24,7 +24,7 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
-  const [taxRate, setTaxRate] = useState<number>(7);
+  const [taxRate, setTaxRate] = useState<number>(0);
 
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unit_price: number }>>([
     { description: '', quantity: 1, unit_price: 0 }
@@ -39,7 +39,7 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
       vessel_id: '',
       date: today.toISOString().split('T')[0],
       due_date: due.toISOString().split('T')[0],
-      tax_rate: 7,
+      tax_rate: 0,
       notes: 'Thank you for choosing Best Coatings Solution (BCS). We appreciate your business and trust in our team. All work is performed to the highest industry standards using premium materials.',
     };
   }, []);
@@ -123,7 +123,7 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
       company_id: companyId,
       customer_id: finalCustomerId,
       work_order_id: formData.get('work_order_id') as string || null,
-      invoice_number: formData.get('invoice_number') as string,
+      invoice_number: (formData.get('invoice_number') as string || '').trim() || null,
       status: 'draft',
       issue_date: formData.get('date') as string || defaultValues.date,
       due_date: formData.get('due_date') as string || defaultValues.due_date,
@@ -239,8 +239,8 @@ export default function InvoiceForm({ companyId, customers }: InvoiceFormProps) 
           </div>
         )}
 
-        <label className="label" htmlFor="invoice_number">Invoice Number</label>
-        <input className="input" id="invoice_number" name="invoice_number" required />
+        <label className="label" htmlFor="invoice_number">Invoice Number (optional)</label>
+        <input className="input" id="invoice_number" name="invoice_number" placeholder="Leave blank to auto-generate" />
 
         <label className="label" htmlFor="date">Issue Date</label>
         <input className="input" id="date" name="date" type="date" defaultValue={defaultValues.date} />
