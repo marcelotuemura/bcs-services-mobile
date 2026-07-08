@@ -3,21 +3,41 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { sendInvoiceToCustomer } from '@/actions/invoices';
+import { sendInvoiceToCustomer, createInvoiceCheckoutSession } from '@/actions/invoices';
 
 interface InvoiceActionsProps {
   invoiceId: string;
   companyId: string;
+  status: string;
+  paymentUrl?: string | null;
+  total: number;
+  payments: Array<{
+    id: string;
+    amount: number;
+    payment_method: string;
+    transaction_id?: string | null;
+    created_at: string;
+    notes?: string | null;
+  }>;
 }
 
-export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsProps) {
+export default function InvoiceActions({
+  invoiceId,
+  companyId,
+  status,
+  paymentUrl: initialPaymentUrl,
+  total,
+  payments
+}: InvoiceActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedStripe, setCopiedStripe] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(initialPaymentUrl || null);
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://bestcoatingssolution.com';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.bestcoatingssolution.com';
   const invoiceUrl = `${baseUrl}/view-invoice/${invoiceId}`;
 
   async function updateStatus(newStatus: string) {
@@ -57,10 +77,35 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
     setLoading(false);
   }
 
-  function handleCopy() {
+  async function handleGenerateLink() {
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    const res = await createInvoiceCheckoutSession(invoiceId, companyId);
+
+    if (res.ok && res.paymentUrl) {
+      setPaymentUrl(res.paymentUrl);
+      setSuccessMessage('Stripe Checkout Payment link generated successfully.');
+      router.refresh();
+    } else {
+      setError(res.message || 'Failed to generate payment link.');
+    }
+    setLoading(false);
+  }
+
+  function handleCopyInvoiceLink() {
     navigator.clipboard.writeText(invoiceUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  }
+
+  function handleCopyStripeLink() {
+    if (paymentUrl) {
+      navigator.clipboard.writeText(paymentUrl);
+      setCopiedStripe(true);
+      setTimeout(() => setCopiedStripe(false), 2000);
+    }
   }
 
   async function recordPayment(e: React.FormEvent<HTMLFormElement>) {
@@ -129,76 +174,169 @@ export default function InvoiceActions({ invoiceId, companyId }: InvoiceActionsP
       {error && <div className="notice error">{error}</div>}
       {successMessage && <div className="notice success">{successMessage}</div>}
       
-      <div className="flex gap-2 flex-wrap">
-        <button 
-          className="button" 
-          onClick={handleSend} 
-          disabled={loading}
-        >
-          Send to Customer
-        </button>
-        <button 
-          className="button success" 
-          onClick={() => updateStatus('paid')} 
-          disabled={loading}
-        >
-          Mark as Paid
-        </button>
-        <button 
-          className="button secondary" 
-          onClick={() => updateStatus('cancelled')} 
-          disabled={loading}
-        >
-          Cancel
-        </button>
-      </div>
+      {status !== 'paid' ? (
+        <>
+          <div className="flex gap-2 flex-wrap">
+            <button 
+              className="button" 
+              onClick={handleSend} 
+              disabled={loading}
+            >
+              Send to Customer
+            </button>
 
-      <div className="border rounded-lg p-4 space-y-3 bg-gray-50/10" style={{ borderColor: 'var(--line)' }}>
-        <h4 className="font-semibold text-sm">Invoice Link Sharing</h4>
-        <p className="text-xs text-gray-400" style={{ color: 'var(--muted)', margin: '0 0 0.5rem' }}>
-          If email delivery is pending or fails, copy and manually share the link below:
-        </p>
-        <div className="flex gap-2">
-          <input 
-            className="input compact" 
-            value={invoiceUrl} 
-            readOnly 
-            style={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}
-          />
-          <button 
-            type="button" 
-            className="button secondary compact" 
-            onClick={handleCopy}
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            {copied ? 'Copied!' : 'Copy Link'}
-          </button>
-        </div>
-      </div>
+            {!paymentUrl && total > 0 && (
+              <button 
+                className="button secondary" 
+                onClick={handleGenerateLink} 
+                disabled={loading}
+              >
+                Generate Payment Link
+              </button>
+            )}
 
-      <form onSubmit={recordPayment} className="border rounded-lg p-4 space-y-2">
-        <h3 className="font-bold">Record Payment</h3>
-        <div className="flex gap-2">
-          <input 
-            className="input compact" 
-            name="amount" 
-            type="number" 
-            step="0.01" 
-            placeholder="Amount" 
-            required 
-          />
-          <select className="input compact" name="method" required>
-            <option value="cash">Cash</option>
-            <option value="credit_card">Credit Card</option>
-            <option value="ach">ACH</option>
-            <option value="check">Check</option>
-          </select>
+            {paymentUrl && (
+              <a 
+                href={paymentUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="button secondary"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                Pay on Stripe
+              </a>
+            )}
+
+            <button 
+              className="button success" 
+              onClick={() => updateStatus('paid')} 
+              disabled={loading}
+            >
+              Mark as Paid
+            </button>
+
+            {status !== 'cancelled' && (
+              <button 
+                className="button secondary" 
+                onClick={() => updateStatus('cancelled')} 
+                disabled={loading}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
+          <div className="border rounded-lg p-4 space-y-3 bg-gray-50/10" style={{ borderColor: 'var(--line)' }}>
+            <h4 className="font-semibold text-sm">Invoice Link Sharing</h4>
+            <p className="text-xs text-gray-400" style={{ color: 'var(--muted)', margin: '0 0 0.5rem' }}>
+              If email delivery is pending or fails, copy and manually share the customer invoice page link:
+            </p>
+            <div className="flex gap-2">
+              <input 
+                className="input compact" 
+                value={invoiceUrl} 
+                readOnly 
+                style={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}
+              />
+              <button 
+                type="button" 
+                className="button secondary compact" 
+                onClick={handleCopyInvoiceLink}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {copiedLink ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
+
+            {paymentUrl && (
+              <div className="pt-2 border-t space-y-1" style={{ borderTopColor: 'var(--line)' }}>
+                <p className="text-xs text-gray-400" style={{ color: 'var(--muted)', margin: '0 0 0.5rem' }}>
+                  Direct Stripe Checkout payment page link:
+                </p>
+                <div className="flex gap-2">
+                  <input 
+                    className="input compact" 
+                    value={paymentUrl} 
+                    readOnly 
+                    style={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  />
+                  <button 
+                    type="button" 
+                    className="button secondary compact" 
+                    onClick={handleCopyStripeLink}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    {copiedStripe ? 'Copied!' : 'Copy Stripe Link'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={recordPayment} className="border rounded-lg p-4 space-y-2">
+            <h3 className="font-bold">Record Payment Manually</h3>
+            <div className="flex gap-2">
+              <input 
+                className="input compact" 
+                name="amount" 
+                type="number" 
+                step="0.01" 
+                placeholder="Amount" 
+                required 
+              />
+              <select className="input compact" name="method" required>
+                <option value="cash">Cash</option>
+                <option value="credit_card">Credit Card</option>
+                <option value="ach">ACH</option>
+                <option value="check">Check</option>
+              </select>
+            </div>
+            <input className="input" name="notes" placeholder="Payment notes" />
+            <button className="button" type="submit" disabled={loading}>
+              Record Payment
+            </button>
+          </form>
+        </>
+      ) : (
+        <div className="border rounded-lg p-4 space-y-3 bg-green-50/5" style={{ borderColor: '#10b981' }}>
+          <h3 className="font-bold text-green-500" style={{ margin: 0 }}>Payment Information</h3>
+          {payments.length > 0 ? (
+            <div className="space-y-4 pt-1">
+              {payments.map((p) => (
+                <div key={p.id} className="text-sm space-y-1 pb-3 last:pb-0 last:border-0" style={{ borderBottom: '1px solid var(--line)' }}>
+                  <div className="flex justify-between">
+                    <span><strong>Amount Paid:</strong></span>
+                    <span>${p.amount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span><strong>Method:</strong></span>
+                    <span className="uppercase">{p.payment_method}</span>
+                  </div>
+                  {p.transaction_id && (
+                    <div className="flex justify-between">
+                      <span><strong>Transaction ID:</strong></span>
+                      <code className="text-xs">{p.transaction_id}</code>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span><strong>Transaction Date:</strong></span>
+                    <span>{new Date(p.created_at).toLocaleString()}</span>
+                  </div>
+                  {p.notes && (
+                    <div className="text-xs text-gray-400 pt-1" style={{ color: 'var(--muted)' }}>
+                      <strong>Notes:</strong> {p.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400" style={{ color: 'var(--muted)', margin: 0 }}>
+              No detailed payment transactions recorded. Marked paid manually.
+            </p>
+          )}
         </div>
-        <input className="input" name="notes" placeholder="Payment notes" />
-        <button className="button" type="submit" disabled={loading}>
-          Record Payment
-        </button>
-      </form>
+      )}
     </div>
   );
 }

@@ -16,7 +16,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
     'invoices.view_own'
   ], context)
 
-  const [invoiceResult, invoiceItemsResult] = await Promise.all([
+  const [invoiceResult, invoiceItemsResult, paymentsResult] = await Promise.all([
     supabase
       .from("invoices")
       .select("*")
@@ -27,11 +27,17 @@ export default async function InvoiceDetailPage({ params }: Props) {
       .from("invoice_items")
       .select("*")
       .eq("invoice_id", id)
-      .order("line_number", { ascending: true })
+      .order("line_number", { ascending: true }),
+    supabase
+      .from("payments")
+      .select("*")
+      .eq("invoice_id", id)
+      .order("created_at", { ascending: false })
   ])
 
   const invoice = invoiceResult.data
   const invoiceItems = invoiceItemsResult.data
+  const payments = paymentsResult.data || []
 
   if (!invoice) {
     notFound()
@@ -99,9 +105,14 @@ export default async function InvoiceDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {invoice.status !== "paid" && (
-        <InvoiceActions invoiceId={invoice.id} companyId={membership.company_id} />
-      )}
+      <InvoiceActions 
+        invoiceId={invoice.id} 
+        companyId={membership.company_id} 
+        status={invoice.status}
+        paymentUrl={invoice.payment_url}
+        total={Number(invoice.total || 0)}
+        payments={payments}
+      />
     </div>
   )
 }

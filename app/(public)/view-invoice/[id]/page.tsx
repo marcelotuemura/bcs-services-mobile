@@ -126,6 +126,17 @@ export default async function PublicInvoicePage({ params }: Props) {
               <span>Balance Due</span>
               <span>${parseFloat(invoice.balance_due || 0).toFixed(2)}</span>
             </div>
+            {invoice.status !== 'paid' && invoice.status !== 'cancelled' && invoice.payment_url && (
+              <div className="pt-4">
+                <a 
+                  href={invoice.payment_url}
+                  className="button block text-center w-full text-white font-bold py-2.5 px-4 rounded-lg transition-colors"
+                  style={{ backgroundColor: '#2563eb', display: 'block', textAlign: 'center', color: 'white' }}
+                >
+                  Pay Invoice with Card
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
